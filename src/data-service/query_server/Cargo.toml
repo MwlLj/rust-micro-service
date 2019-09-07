@@ -28,3 +28,11 @@ version = "*"
 
 [dependencies.serde_json]
 version = "*"
+
+[dependencies.config]
+git = "https://github.com/MwlLj/rust-libs"
+version = "0.1.1"
+
+[dependencies.uuid]
+version = "*"
+features = ["v4"]

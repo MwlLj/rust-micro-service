@@ -20,7 +20,7 @@ const param_service_name: &str = "name";
 pub struct CHttp<'a> {
     select: Box<dyn select::ISelect>,
     guard: Box<dyn guard::IGuard>,
-    param: &'a structs::start::CQueryStart<'a>
+    param: &'a structs::start::CQueryStart
 }
 
 impl<'a> CHttp<'a> {
@@ -33,12 +33,12 @@ impl<'a> CHttp<'a> {
             }
         };
         let ip = match &httpListen.ip {
-            Some(ip) => ip,
+            Some(ip) => &ip,
             None => {
                 "0.0.0.0"
             }
         };
-        let selfIp = match &service.host {
+        let selfIp = match &httpListen.ip {
             Some(h) => {
                 h.clone()
             },

@@ -3,8 +3,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Default, Clone)]
 pub struct CServiceRegister {
     pub serviceId: String,
-    pub serviceName: String,
-    pub host: Option<String>
+    pub serviceName: String
 }
 
 #[derive(Default, Clone, Serialize, Deserialize, Debug)]
