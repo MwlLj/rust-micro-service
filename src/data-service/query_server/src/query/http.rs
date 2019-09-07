@@ -14,7 +14,6 @@ use std::collections::HashMap;
 
 const heart_url: &str = "/heart";
 const heart_method: &str = "POST";
-const get_service_url: &str = "/service/instance";
 
 const param_service_name: &str = "name";
 
@@ -26,7 +25,14 @@ pub struct CHttp<'a> {
 
 impl<'a> CHttp<'a> {
     pub fn start(&self, service: &structs::service::CServiceRegister, heart: &structs::heart::CHeart) -> Result<(), &str> {
-        let ip = match &self.param.httpListen.ip {
+        let httpListen = match &self.param.httpListen {
+            Some(listen) => listen,
+            None => {
+                println!("httpListen field is None");
+                return Err("httpListen field is None")
+            }
+        };
+        let ip = match &httpListen.ip {
             Some(ip) => ip,
             None => {
                 "0.0.0.0"
@@ -47,7 +53,8 @@ impl<'a> CHttp<'a> {
         // register.Address = service.addr.clone();
         // register.Port = service.port;
         register.Address = selfIp.clone();
-        register.Port = self.param.httpListen.port;
+        register.Port = httpListen.port;
+        register.Tags = Some(vec![httpListen.proto.clone()]);
         let mut check = CCheck::default();
         check.ID = service.serviceId.clone();
         /*
@@ -62,9 +69,9 @@ impl<'a> CHttp<'a> {
             check.Method = heart_method.to_string();
         };
         */
-        let mut addr = tools::addr::net2http(&self.param.httpListen.proto, &tools::addr::CNet{
+        let mut addr = tools::addr::net2http(&httpListen.proto, &tools::addr::CNet{
             host: selfIp,
-            port: self.param.httpListen.port,
+            port: httpListen.port,
             domainName: None
         });
         addr.push_str(heart_url);
@@ -81,7 +88,6 @@ impl<'a> CHttp<'a> {
             }
         };
         register.Check = Some(check);
-        println!("{:?}", register);
         match self.guard.registerQueryer(&register) {
             Ok(()) => {},
             Err(err) => {
@@ -89,7 +95,7 @@ impl<'a> CHttp<'a> {
             }
         }
         // start http listen
-        let server = match tiny_http::Server::http(&self.joinAddr(&ip, self.param.httpListen.port)) {
+        let server = match tiny_http::Server::http(&self.joinAddr(&ip, httpListen.port)) {
             Ok(s) => s,
             Err(err) => {
                 println!("tiny_http http listen error, err: {}", err);
@@ -108,7 +114,7 @@ impl<'a> CHttp<'a> {
         let (url, params) = undecode::parse(request.url());
         if url == heart_url {
             self.handleHeart(request);
-        } else if url == get_service_url {
+        } else if url == consts::proto::get_handle_service_url {
             let params = match params {
                 Some(p) => p,
                 None => {
@@ -122,24 +128,40 @@ impl<'a> CHttp<'a> {
     }
 
     fn handleGetServiceInstance(&self, params: &HashMap<String, String>, request: Request) {
-        let serviceName = match params.get(param_service_name) {
-            Some(s) => s,
-            None => {
-                println!("params not found name");
-                self.responseDirect(request, "params not found name field");
-                return;
+        let mut response = structs::proto::CGetHandleServiceResponse::default();
+        loop {
+            let serviceName = match params.get(param_service_name) {
+                Some(s) => s,
+                None => {
+                    println!("params not found name");
+                    response.result = false;
+                    response.code = consts::proto::code_param_error;
+                    response.message = "params not found name field".to_string();
+                    // self.responseDirect(request, "params not found name field");
+                    break;
+                }
+            };
+            let service = match self.select.get(serviceName) {
+                Some(s) => s,
+                None => {
+                    println!("service {} instance is not found", serviceName);
+                    response.result = false;
+                    response.code = consts::proto::code_param_error;
+                    response.message = "service instance is not found  or service param error".to_string();
+                    // self.responseDirect(request, "service instance is not found or service param error");
+                    break;
+                }
+            };
+            response.service = Some(service);
+        }
+        let resStr = match serde_json::to_string(&response) {
+            Ok(r) => r,
+            Err(err) => {
+                println!("decode response json error, err: {}", err);
+                String::from("decode response json error")
             }
         };
-        let service = match self.select.get(serviceName) {
-            Some(s) => s,
-            None => {
-                println!("service {} instance is not found", serviceName);
-                self.responseDirect(request, "service instance is not found");
-                return;
-            }
-        };
-        // serde_json::to_string()
-        request.respond(Response::from_string("success".to_string()));
+        request.respond(Response::from_string(resStr));
     }
 
     fn handleHeart(&self, request: Request) {

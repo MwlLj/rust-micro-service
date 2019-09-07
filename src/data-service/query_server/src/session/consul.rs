@@ -15,20 +15,26 @@ impl ISession for CConsul {
         match self.client.agent.services.getHealthServiceInfo(name) {
             Ok(ss) => {
                 for service in ss {
+                    let mut proto: String = String::new();
                     let mut callTimes: u64 = 0;
                     let tags = &service.Service.Tags;
-                    if tags.len() > 0 {
-                        callTimes = match tags[0].parse::<u64>() {
+                    if tags.len() >= 2 {
+                        proto = tags[0].clone();
+                        callTimes = match tags[1].parse::<u64>() {
                             Ok(c) => c,
                             Err(err) => {
                                 0
                             }
                         };
+                    } else {
+                        println!("hanle server tags length error, first is proto, second is callTimes");
+                        continue;
                     }
                     services.push(structs::service::CService{
                         serviceId: service.Service.ID.clone(),
                         serviceName: service.Service.Service.clone(),
                         addr: service.Service.Address.clone(),
+                        proto: proto,
                         port: service.Service.Port,
                         callTimes: callTimes
                     });
@@ -38,7 +44,11 @@ impl ISession for CConsul {
                 return None;
             }
         };
-        Some(services)
+        if services.len() > 0 {
+            Some(services)
+        } else {
+            None
+        }
     }
 }
 

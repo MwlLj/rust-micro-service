@@ -12,7 +12,7 @@ pub struct CHttp<'a> {
 
 #[derive(Default, Clone, Debug)]
 pub struct CQueryStart<'a> {
-    pub httpListen: CHttp<'a>,
+    pub httpListen: Option<CHttp<'a>>,
     pub selectMode: String,
     pub sessionMode: String,
     pub guardMode: String,

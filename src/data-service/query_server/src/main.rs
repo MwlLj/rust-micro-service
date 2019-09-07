@@ -6,12 +6,12 @@ use rust_parse::cmd::CCmd;
 
 fn main() {
     let param = structs::start::CQueryStart{
-        httpListen: structs::start::CHttp{
-            proto: "http".to_string(),
+        httpListen: Some(structs::start::CHttp{
+            proto: consts::proto::proto_type_http.to_string(),
             ip: None,
             port: 5000,
             cert: None
-        },
+        }),
         selectMode: consts::client::select_mode_random.to_string(),
         sessionMode: consts::client::session_mode_consul.to_string(),
         guardMode: consts::client::guard_mode_consul.to_string(),

@@ -10,7 +10,7 @@ pub struct CRandom {
 }
 
 impl ISelect for CRandom {
-    fn get(&self, name: &str) -> Option<structs::service::CService> {
+    fn get(&self, name: &str) -> Option<structs::proto::CService> {
         let instances = match self.session.getValidService(name) {
             Some(v) => v,
             None => {
@@ -32,7 +32,13 @@ impl ISelect for CRandom {
                 return None;
             }
         };
-        Some(obj.clone())
+        Some(structs::proto::CService{
+            serviceId: obj.serviceId.clone(),
+            serviceName: obj.serviceName.clone(),
+            addr: obj.addr.clone(),
+            proto: obj.proto.clone(),
+            port: obj.port
+        })
     }
 }
 
