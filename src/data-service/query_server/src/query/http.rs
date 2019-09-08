@@ -153,6 +153,7 @@ impl<'a> CHttp<'a> {
                 }
             };
             response.service = Some(service);
+            break;
         }
         let resStr = match serde_json::to_string(&response) {
             Ok(r) => r,

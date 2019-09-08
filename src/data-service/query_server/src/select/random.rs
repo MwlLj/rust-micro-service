@@ -14,7 +14,7 @@ impl ISelect for CRandom {
         let instances = match self.session.getValidService(name) {
             Some(v) => v,
             None => {
-                println!("name: {} is not found", name);
+                println!("ISelect get: name: {} is not found", name);
                 return None;
             }
         };

@@ -11,7 +11,7 @@ pub struct CService {
     pub port: u16
 }
 
-#[derive(Default, Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CGetHandleServiceResponse {
     pub service: Option<CService>,
     pub result: bool,
@@ -25,9 +25,10 @@ pub struct CResult {
     pub message: String
 }
 
-impl Default for CResult {
+impl Default for CGetHandleServiceResponse {
     fn default() -> Self {
-        CResult{
+        CGetHandleServiceResponse{
+            service: None,
             result: true,
             code: consts::proto::code_ok,
             message: consts::proto::message_ok.to_string()
