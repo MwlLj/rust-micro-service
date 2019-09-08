@@ -4,6 +4,8 @@ use crate::structs;
 const health_service_name: &str = "/health/service/name/";
 const service_register: &str = "/service/register";
 
+const service_status_passing: &str = "passing";
+
 pub struct CServices {
     sender: http::sender::CSender
 }
@@ -43,7 +45,13 @@ impl CServices {
                 return Err("decode response json error");
             }
         };
-        Ok(response)
+        let mut res: Vec<structs::agent::CHealthServiceInfo> = Vec::new();
+        for item in response {
+            if item.AggregatedStatus == service_status_passing {
+                res.push(item);
+            }
+        }
+        Ok(res)
     }
 }
 
