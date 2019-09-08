@@ -1,0 +1,18 @@
+[package]
+name = "basic"
+version = "0.1.0"
+authors = ["MwlLj <731025894@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.handle_server]
+path = "../.."
+version = "*"
+
+[dependencies.tiny_http]
+version = "*"
+
+[dependencies.rust_parse]
+git = "https://github.com/MwlLj/rust_parse"
+version = "*"

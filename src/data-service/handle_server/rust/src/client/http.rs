@@ -2,7 +2,7 @@ use crate::consts;
 use crate::structs;
 use crate::register;
 use crate::tools;
-use super::IClient;
+use super::{IClient, IServer, CHttpHeart, CHeart};
 
 use consul_client::structs::agent::{CServiceRegister, CCheck};
 use config::json::CConfig;
@@ -15,8 +15,7 @@ pub struct CHttp {
 }
 
 impl IClient for CHttp {
-    fn start<F>(&self, param: &structs::start::CClientParam, f: F) -> Result<(), &str>
-        where F: FnOnce(&structs::start::CClientParam) {
+    fn start<F: IServer>(&self, param: &structs::start::CClientParam, f: &mut F) -> Result<(), &str> {
         let httpListen = match &param.httpListen {
             Some(listen) => listen,
             None => {
@@ -44,7 +43,7 @@ impl IClient for CHttp {
         register.Name = param.serviceName.clone();
         register.Address = selfIp.clone();
         register.Port = httpListen.port;
-        register.Tags = Some(vec![httpListen.proto.clone()]);
+        register.Tags = Some(vec![httpListen.proto.clone(), "0".to_string()]);
         let mut check = CCheck::default();
         check.ID = param.serviceId.clone();
         let mut addr = tools::addr::net2http(&httpListen.proto, &tools::addr::CNet{
@@ -72,12 +71,21 @@ impl IClient for CHttp {
                 return Err(err);
             }
         }
-        f(param);
+        let mut h = CHeart::default();
+        h.http = Some(CHttpHeart{
+            method: heart_method.to_string(),
+            url: heart_url.to_string()
+        });
+        if let Err(err) = f.registerHeart(&h) {
+            return Err("IServer registerHeart error");
+        };
+        if let Err(err) = f.start(&param) {
+            return Err("IServer start error");
+        };
         Ok(())
     }
 
-    fn startByConfig<F>(&self, configPath: &str, param: &structs::start::CClientParam, f: F) -> Result<(), &str>
-        where F: FnOnce(&structs::start::CClientParam) {
+    fn startByConfig<F: IServer>(&self, configPath: &str, f: &mut F) -> Result<(), &str> {
         let config = match CConfig::load(configPath, &structs::start::CClientParam{
             httpListen: Some(structs::start::CHttp{
                 proto: consts::proto::proto_type_http.to_string(),

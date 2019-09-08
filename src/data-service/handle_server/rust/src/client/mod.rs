@@ -1,5 +1,21 @@
 use crate::structs;
 
+#[derive(Default, Clone)]
+pub struct CHttpHeart {
+    pub method: String,
+    pub url: String
+}
+
+#[derive(Default, Clone)]
+pub struct CHeart {
+    pub http: Option<CHttpHeart>
+}
+
+pub trait IServer {
+    fn registerHeart(&mut self, heart: &CHeart) -> Result<(), &str>;
+    fn start(&self, param: &structs::start::CClientParam) -> Result<(), &str>;
+}
+
 pub struct CClient {
     http: http::CHttp
 }
@@ -11,10 +27,8 @@ impl CClient {
 }
 
 pub trait IClient {
-    fn start<F>(&self, param: &structs::start::CClientParam, t: F) -> Result<(), &str>
-        where F: FnOnce(&structs::start::CClientParam);
-    fn startByConfig<F>(&self, configPath: &str, param: &structs::start::CClientParam, f: F) -> Result<(), &str>
-        where F: FnOnce(&structs::start::CClientParam);
+    fn start<F: IServer>(&self, param: &structs::start::CClientParam, f: &mut F) -> Result<(), &str>;
+    fn startByConfig<F: IServer>(&self, configPath: &str, f: &mut F) -> Result<(), &str>;
 }
 
 pub mod http;
