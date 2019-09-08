@@ -1,6 +1,7 @@
 use query_server::consts;
 use query_server::structs;
 use query_server::query;
+use query_server::query::IQuery;
 
 use serde::{Serialize, Deserialize};
 use rust_parse::cmd::CCmd;

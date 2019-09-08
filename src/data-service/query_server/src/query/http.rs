@@ -23,8 +23,8 @@ pub struct CHttp<'a> {
     param: &'a structs::start::CQueryStart
 }
 
-impl<'a> CHttp<'a> {
-    pub fn start(&self, service: &structs::service::CServiceRegister, heart: &structs::heart::CHeart) -> Result<(), &str> {
+impl<'a> IQuery for CHttp<'a> {
+    fn start(&self, service: &structs::service::CServiceRegister, heart: &structs::heart::CHeart) -> Result<(), &str> {
         let httpListen = match &self.param.httpListen {
             Some(listen) => listen,
             None => {
@@ -54,7 +54,7 @@ impl<'a> CHttp<'a> {
         // register.Port = service.port;
         register.Address = selfIp.clone();
         register.Port = httpListen.port;
-        register.Tags = Some(vec![httpListen.proto.clone()]);
+        register.Tags = Some(vec![httpListen.proto.clone(), "0".to_string()]);
         let mut check = CCheck::default();
         check.ID = service.serviceId.clone();
         /*
