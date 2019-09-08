@@ -1,6 +1,7 @@
 use handle_server::{consts, structs, client, client::IClient};
 use tiny_http::{Server, Request, Response};
 use rust_parse::url;
+use rust_parse::cmd::CCmd;
 
 use std::collections::HashMap;
 
@@ -71,6 +72,12 @@ impl CServer {
 }
 
 fn main() {
+    let mut cmdHandler = CCmd::new();
+    let configPath = cmdHandler.register("-cfg", "config.json");
+    cmdHandler.parse();
+
+    let configPath = configPath.borrow();
+
     let client = match client::CClient::http(consts::client::register_mode_consul, "127.0.0.1:8500") {
         Some(c) => c,
         None => {
@@ -85,7 +92,7 @@ fn main() {
             return;
         }
     };
-    if let Err(err) = client.startByConfig("config.json", &mut server) {
+    if let Err(err) = client.startByConfig(&*configPath, &mut server) {
         println!("client start error, err: {}", err);
         return;
     };
