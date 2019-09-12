@@ -20,7 +20,7 @@ version = "0.1.9"
 version = "*"
 
 [dependencies.consul_client]
-path = "../consul_client"
+path = "../../consul-client"
 version = "*"
 
 [dependencies.serde]
