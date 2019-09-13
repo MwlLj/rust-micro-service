@@ -41,7 +41,7 @@ impl CServices {
         let response: Vec<structs::agent::CHealthServiceInfo> = match res.json() {
             Ok(r) => r,
             Err(err) => {
-                println!("decode getHealthServiceName error, err: {}", err);
+                println!("decode getHealthServiceName error, serviceName: {}, err: {}", &serviceName, err);
                 return Err("decode response json error");
             }
         };
