@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies.query_client]
 path = "../.."
+
+[dependencies.serde]
+version = "1.0"

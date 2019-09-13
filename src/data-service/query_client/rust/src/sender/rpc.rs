@@ -5,7 +5,7 @@ pub struct CRpc {
 }
 
 impl ISender for CRpc {
-    fn send(&self, handleServiceName: &str, net: &structs::sender::CNet) -> Option<structs::client::CService> {
+    fn send(&self, paramType: &str, content: &str, net: &structs::sender::CNet) -> Option<structs::client::CService> {
         None
     }
 }

@@ -27,7 +27,7 @@ impl ISession for CConsul {
                             }
                         };
                     } else {
-                        println!("hanle server tags length error, first is proto, second is callTimes");
+                        println!("hanle server tags length error, first is proto, second is callTimes, service: {:?}", service.Service);
                         continue;
                     }
                     services.push(structs::service::CService{

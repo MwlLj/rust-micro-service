@@ -4,6 +4,8 @@ use crate::structs;
 use crate::sender;
 use super::IClient;
 
+use serde::{Serialize};
+
 pub struct CDispatch {
     select: Box<dyn select::ISelect>,
     queryServerName: String,
@@ -11,7 +13,26 @@ pub struct CDispatch {
 }
 
 impl IClient for CDispatch {
-    fn getHandleService(&self, handleServiceName: &str) -> Option<structs::client::CService> {
+    fn getHandleServiceByJson<T>(&self, t: &T) -> Option<structs::client::CService>
+        where T: Serialize {
+        // json to string
+        let content = match serde_json::to_string(t) {
+            Ok(c) => c,
+            Err(err) => {
+                println!("json to string error, err: {}", err);
+                return None;
+            }
+        };
+        self.getHandleService(consts::proto::param_type_json, &content)
+    }
+
+    fn getHandleServiceByString(&self, content: &str) -> Option<structs::client::CService> {
+        self.getHandleService(consts::proto::param_type_string, content)
+    }
+}
+
+impl CDispatch {
+    fn getHandleService(&self, paramType: &str, content: &str) -> Option<structs::client::CService> {
         // select query service
         let queryService = match self.select.get(&self.queryServerName) {
             Some(q) => q,
@@ -27,11 +48,12 @@ impl IClient for CDispatch {
                 return None;
             }
         };
-        sender.send(handleServiceName, &structs::sender::CNet{
+        sender.send(paramType, &content, &structs::sender::CNet{
             ip: queryService.addr.clone(),
             port: queryService.port
         })
     }
+
 }
 
 impl CDispatch {

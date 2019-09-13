@@ -2,6 +2,14 @@ use query_client::client::{IClient, dispatch::CDispatch};
 use query_client::structs;
 use query_client::consts;
 
+use serde::{Serialize};
+
+#[derive(Serialize)]
+struct CParam {
+    projectName: String,
+    projectVersion: String
+}
+
 fn main() {
     let client = match CDispatch::new(&structs::start::CClientParam{
         selectMode: consts::client::select_mode_random.to_string(),
@@ -15,7 +23,20 @@ fn main() {
             return;
         }
     };
-    let service = match client.getHandleService("project1.v1-0.data-service.handle-server") {
+    /*
+    let service = match client.getHandleServiceByString("project1.v1-0.data-service.handle-server") {
+        Some(s) => s,
+        None => {
+            println!("service not found");
+            return;
+        }
+    };
+    println!("{:?}", service);
+    */
+    let service = match client.getHandleServiceByJson(&CParam{
+        projectName: "project1".to_string(),
+        projectVersion: "v1-0".to_string()
+    }) {
         Some(s) => s,
         None => {
             println!("service not found");

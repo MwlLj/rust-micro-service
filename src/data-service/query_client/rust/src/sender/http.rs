@@ -1,16 +1,18 @@
 use crate::structs;
 use super::ISender;
 
-use reqwest;
+use reqwest::{Client};
 
 const url_handle_service_instance: &str = "/handle/service/instance";
-const param_name: &str = "name";
+// const param_name: &str = "name";
+const param_type: &str = "type";
 
 pub struct CHttp {
+    client: Client
 }
 
 impl ISender for CHttp {
-    fn send(&self, handleServiceName: &str, net: &structs::sender::CNet) -> Option<structs::client::CService> {
+    fn send(&self, paramType: &str, content: &str, net: &structs::sender::CNet) -> Option<structs::client::CService> {
         let mut url = String::new();
         url.push_str("http://");
         url.push_str(&net.ip);
@@ -18,10 +20,10 @@ impl ISender for CHttp {
         url.push_str(&net.port.to_string());
         url.push_str(url_handle_service_instance);
         url.push_str("?");
-        url.push_str(param_name);
+        url.push_str(param_type);
         url.push_str("=");
-        url.push_str(&handleServiceName);
-        let mut response = match reqwest::get(&url) {
+        url.push_str(paramType);
+        let mut response = match self.client.get(&url).body(Vec::from(content)).send() {
             Ok(res) => res,
             Err(err) => {
                 println!("send get request error, err: {}", err);
@@ -52,6 +54,8 @@ impl ISender for CHttp {
 
 impl CHttp {
     pub fn new() -> CHttp {
-        CHttp{}
+        CHttp{
+            client: Client::new()
+        }
     }
 }

@@ -11,3 +11,6 @@ pub const code_parse_error: u8 = 2;
 pub const code_communicate_error: u8 = 3;
 
 pub const message_ok: &str = "ok";
+
+pub const param_type_string: &str = "string";
+pub const param_type_json: &str = "json";

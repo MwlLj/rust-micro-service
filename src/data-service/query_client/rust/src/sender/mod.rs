@@ -1,7 +1,7 @@
 use crate::structs;
 
 pub trait ISender {
-    fn send(&self, handleServiceName: &str, net: &structs::sender::CNet) -> Option<structs::client::CService>;
+    fn send(&self, paramType: &str, content: &str, net: &structs::sender::CNet) -> Option<structs::client::CService>;
 }
 
 pub mod http;
