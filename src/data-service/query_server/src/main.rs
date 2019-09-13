@@ -7,8 +7,6 @@ use serde::{Serialize, Deserialize};
 use rust_parse::cmd::CCmd;
 use config::json::CConfig;
 
-use std::path::Path;
-
 #[derive(Serialize, Deserialize)]
 struct CConfigInfo {
     start: structs::start::CQueryStart,

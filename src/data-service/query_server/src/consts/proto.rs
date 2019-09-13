@@ -9,5 +9,6 @@ pub const code_ok: u8 = 0;
 pub const code_param_error: u8 = 1;
 pub const code_parse_error: u8 = 2;
 pub const code_communicate_error: u8 = 3;
+pub const code_server_error: u8 = 4;
 
 pub const message_ok: &str = "ok";

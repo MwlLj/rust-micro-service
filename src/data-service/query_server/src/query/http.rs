@@ -186,8 +186,16 @@ impl<'a> CHttp<'a> {
                 };
                 serviceName = stream::parse(&body, &rule);
             }
+            if serviceName.len() == 0 {
+                response.result = false;
+                response.code = consts::proto::code_server_error;
+                response.message = "server dynamic config parse error".to_string();
+                break;
+            }
             let service = match self.select.get(&serviceName) {
-                Some(s) => s,
+                Some(s) => {
+                    s
+                },
                 None => {
                     println!("service {} instance is not found", serviceName);
                     response.result = false;
@@ -247,13 +255,13 @@ impl<'a> CHttp<'a> {
 impl<'a> CHttp<'a> {
     pub fn new<'b>(param: &'b structs::start::CQueryStart) -> Option<CHttp<'b>> {
         let mut dynamicConfigContent: Option<String> = None;
-        println!("{:?}", param);
+        // println!("{:?}", param);
         if let Some(path) = &param.dynamicConfigPath {
             let s = match fs::read_to_string(path) {
                 Ok(s) => s,
                 Err(err) => {
                     println!("open dynamic config error, err: {}", err);
-                    return None;
+                    "".to_string()
                 }
             };
             dynamicConfigContent = Some(s);
