@@ -19,7 +19,8 @@ pub struct CQueryStart {
     pub sessionMode: String,
     pub guardMode: String,
     pub sessionDial: String,
-    pub guardDial: String
+    pub guardDial: String,
+    pub dynamicConfigPath: Option<String>
 }
 
 #[derive(Serialize, Deserialize)]

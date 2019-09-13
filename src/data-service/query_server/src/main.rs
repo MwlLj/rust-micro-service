@@ -7,6 +7,8 @@ use serde::{Serialize, Deserialize};
 use rust_parse::cmd::CCmd;
 use config::json::CConfig;
 
+use std::path::Path;
+
 #[derive(Serialize, Deserialize)]
 struct CConfigInfo {
     start: structs::start::CQueryStart,
@@ -33,7 +35,8 @@ fn main() {
             sessionMode: consts::client::session_mode_consul.to_string(),
             guardMode: consts::client::guard_mode_consul.to_string(),
             sessionDial: "127.0.0.1:8500".to_string(),
-            guardDial: "127.0.0.1:8500".to_string()
+            guardDial: "127.0.0.1:8500".to_string(),
+            dynamicConfigPath: Some("dynamic.cfg".to_string())
         },
         register: structs::start::CRegister{
             serviceId: uuid::Uuid::new_v4().to_string(),

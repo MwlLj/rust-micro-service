@@ -23,6 +23,10 @@ version = "*"
 path = "../../consul-client"
 version = "*"
 
+[dependencies.config_parse]
+path = "../../config-parse"
+version = "*"
+
 [dependencies.serde]
 version = "*"
 

@@ -8,19 +8,25 @@ use super::IQuery;
 use tiny_http::{Request, Response};
 use rust_parse::url::undecode;
 use consul_client::structs::agent::{CServiceRegister, CCheck};
+use config_parse::json::stream;
 use serde_json;
 
 use std::collections::HashMap;
+use std::fs;
 
 const heart_url: &str = "/heart";
 const heart_method: &str = "POST";
 
-const param_service_name: &str = "name";
+// const param_service_name: &str = "name";
+const param_body_type: &str = "type";
+const param_body_type_string: &str = "string";
+const param_body_type_json: &str = "json";
 
 pub struct CHttp<'a> {
     select: Box<dyn select::ISelect>,
     guard: Box<dyn guard::IGuard>,
-    param: &'a structs::start::CQueryStart
+    param: &'a structs::start::CQueryStart,
+    dynamicConfigContent: Option<String>
 }
 
 impl<'a> IQuery for CHttp<'a> {
@@ -127,9 +133,10 @@ impl<'a> CHttp<'a> {
         }
     }
 
-    fn handleGetServiceInstance(&self, params: &HashMap<String, String>, request: Request) {
+    fn handleGetServiceInstance(&self, params: &HashMap<String, String>, mut request: Request) {
         let mut response = structs::proto::CGetHandleServiceResponse::default();
         loop {
+            /*
             let serviceName = match params.get(param_service_name) {
                 Some(s) => s,
                 None => {
@@ -141,7 +148,45 @@ impl<'a> CHttp<'a> {
                     break;
                 }
             };
-            let service = match self.select.get(serviceName) {
+            */
+            let bodyType = match params.get(param_body_type) {
+                Some(s) => s,
+                None => {
+                    println!("params not found type");
+                    response.result = false;
+                    response.code = consts::proto::code_param_error;
+                    response.message = "params not found type field".to_string();
+                    break;
+                }
+            };
+            let mut body = String::new();
+            match request.as_reader().read_to_string(&mut body) {
+                Ok(len) => {},
+                Err(err) => {
+                    println!("read body error, err: {}", err);
+                    response.result = false;
+                    response.code = consts::proto::code_parse_error;
+                    response.message = "body read error".to_string();
+                    break;
+                }
+            };
+            let mut serviceName = String::new();
+            if bodyType == param_body_type_string {
+                serviceName = body;
+            } else if bodyType == param_body_type_json {
+                let rule = match &self.dynamicConfigContent {
+                    Some(r) => r,
+                    None => {
+                        println!("type is json, but dynamic config is not exist");
+                        response.result = false;
+                        response.code = consts::proto::code_param_error;
+                        response.message = "type is json, but dynamic config is not exist".to_string();
+                        break;
+                    }
+                };
+                serviceName = stream::parse(&body, &rule);
+            }
+            let service = match self.select.get(&serviceName) {
                 Some(s) => s,
                 None => {
                     println!("service {} instance is not found", serviceName);
@@ -201,6 +246,18 @@ impl<'a> CHttp<'a> {
 
 impl<'a> CHttp<'a> {
     pub fn new<'b>(param: &'b structs::start::CQueryStart) -> Option<CHttp<'b>> {
+        let mut dynamicConfigContent: Option<String> = None;
+        println!("{:?}", param);
+        if let Some(path) = &param.dynamicConfigPath {
+            let s = match fs::read_to_string(path) {
+                Ok(s) => s,
+                Err(err) => {
+                    println!("open dynamic config error, err: {}", err);
+                    return None;
+                }
+            };
+            dynamicConfigContent = Some(s);
+        };
         if param.selectMode == consts::client::select_mode_random {
             let s = match select::random::CRandom::new(&param.sessionMode, &param.sessionDial) {
                 Some(s) => s,
@@ -219,7 +276,8 @@ impl<'a> CHttp<'a> {
             return Some(CHttp{
                 select: Box::new(s),
                 guard: g,
-                param: param
+                param: param,
+                dynamicConfigContent: dynamicConfigContent
             });
         } else if param.selectMode == consts::client::select_mode_handle_times {
             let s = match select::handle_times::CHandleTimes::new(&param.sessionMode, &param.sessionDial) {
@@ -239,7 +297,8 @@ impl<'a> CHttp<'a> {
             return Some(CHttp{
                 select: Box::new(s),
                 guard: g,
-                param: param
+                param: param,
+                dynamicConfigContent: dynamicConfigContent
             });
         }
         None
