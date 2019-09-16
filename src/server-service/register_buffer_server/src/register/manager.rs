@@ -1,11 +1,30 @@
 use crate::structs;
 use crate::consts;
 use super::{consul, zookeeper};
+use super::IRegister;
 
 pub struct CManager {
-    consul: Option<consul::CConsul>,
-    zookeeper: Option<zookeeper::CZookeeper>
+    pub consul: Option<consul::CConsul>,
+    pub zookeeper: Option<zookeeper::CZookeeper>
 }
+
+/*
+impl CManager {
+    pub fn get<T>(&self, regCenterType: &str) -> Result<&T, &str>
+        where T: IRegister {
+        if regCenterType == consts::proto::register_center_type_consul {
+            match &self.consul {
+                Some(c) => Ok(c),
+                None => {
+                    Err("not found")
+                }
+            }
+        } else {
+            Err("not found")
+        }
+    }
+}
+*/
 
 impl CManager{
     pub fn new(centers: &Vec<structs::config::CRegisterCenter>) -> CManager {

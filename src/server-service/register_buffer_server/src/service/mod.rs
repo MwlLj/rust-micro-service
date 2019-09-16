@@ -1,4 +1,3 @@
-use crate::register;
 use crate::structs;
 use crate::consts;
 use random::CRandom;
@@ -13,15 +12,26 @@ pub trait ISelect {
 }
 
 pub struct CService {
-    manager: Arc<Mutex<register::manager::CManager>>,
     serviceName: String,
-    regCenterType:String,
-    select: Box<dyn ISelect + Sync>
+    regCenterType: String,
+    select: Box<dyn ISelect + Sync + Send + 'static>
 }
 
 impl CService {
     pub fn service(&self, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
         self.select.service(cond)
+    }
+
+    pub fn updateServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
+        self.select.updateServices(services);
+    }
+
+    pub fn getServices(&self) -> HashMap<String, structs::service::CServiceInfo> {
+        let mut services = HashMap::new();
+        for item in self.select.getServices() {
+            services.insert(item.serviceId.to_string(), item.clone());
+        }
+        services
     }
 
     pub fn syncData(&mut self, dbServices: &mut Vec<structs::service::CServiceInfo>) {
@@ -42,13 +52,16 @@ impl CService {
         // update memory
         self.select.updateServices(dbServices.clone());
     }
+
+    pub fn getRegCenterType(&self) -> &str {
+        &self.regCenterType
+    }
 }
 
 impl CService {
-    pub fn new(name: &str, regCenterType: &str, selectType: &str, manager: Arc<Mutex<register::manager::CManager>>) -> Option<CService> {
+    pub fn new(name: &str, regCenterType: &str, selectType: &str) -> Option<CService> {
         if selectType == consts::proto::select_type_random {
             return Some(CService{
-                manager: manager,
                 serviceName: name.to_string(),
                 regCenterType: regCenterType.to_string(),
                 select: Box::new(CRandom::new())
