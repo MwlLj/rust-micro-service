@@ -15,7 +15,7 @@ pub struct CBuffer {
 }
 
 impl CBuffer {
-    pub fn getService(&self, regCenterType: &str, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
+    pub fn getService(&self, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
         let mut serviceItems = match self.serviceItems.lock() {
             Ok(s) => s,
             Err(err) => {
@@ -28,14 +28,14 @@ impl CBuffer {
                 s.service(cond)
             },
             None => {
-                let mut service = match service::CService::new(cond.name, regCenterType) {
+                let mut service = match service::CService::new(cond.name, cond.regCenterType) {
                     Some(s) => s,
                     None => {
                         println!("service new error");
                         return None;
                     }
                 };
-                let services = match CBuffer::getServicesFromRegisterCenter(self.manager.clone(), cond.name, regCenterType) {
+                let services = match CBuffer::getServicesFromRegisterCenter(self.manager.clone(), cond.name, cond.regCenterType) {
                     Some(s) => s,
                     None => {
                         println!("getServicesFomrRegisterCenter error");

@@ -17,3 +17,10 @@ version = "1.0"
 
 [dependencies.rand]
 version = "0.7"
+
+[dependencies.rust_parse]
+git = "https://github.com/MwlLj/rust_parse"
+version = "*"
+
+[dependencies.tiny_http]
+version = "*"

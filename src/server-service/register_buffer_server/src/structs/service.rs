@@ -16,6 +16,12 @@ pub struct CServiceInner {
     pub callTimes: u64
 }
 
+#[derive(Default, Clone)]
+pub struct CServiceRegister {
+    pub serviceId: String,
+    pub serviceName: String
+}
+
 impl CServiceInfo {
     pub fn copy(&mut self, service: &CServiceInfo) {
         self.serviceId = service.serviceId.clone();
