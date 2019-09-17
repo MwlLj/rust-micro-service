@@ -1,34 +1,47 @@
 use crate::structs;
 use crate::consts;
-use random::CRandom;
+use manager::CManager;
 
 use std::sync::{Mutex, Arc};
 use std::collections::HashMap;
 
 pub trait ISelect {
-    fn getServices(&self) -> &Vec<structs::service::CServiceInfo>;
-    fn updateServices(&mut self, services: Vec<structs::service::CServiceInfo>);
-    fn service(&self, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService>;
+    fn service(&self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)>;
 }
 
 pub struct CService {
     serviceName: String,
     regCenterType: String,
-    select: Box<dyn ISelect + Sync + Send + 'static>
+    services: Vec<structs::service::CServiceInfo>,
+    selectManager: CManager
 }
 
 impl CService {
-    pub fn service(&self, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
-        self.select.service(cond)
+    pub fn service(&mut self, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
+        let select = match self.selectManager.get(&cond.selectType) {
+            Some(s) => s,
+            None => {
+                return None;
+            }
+        };
+        let (service, inner) = match select.service(&self.services, cond) {
+            Some(s) => s,
+            None => {
+                return None;
+            }
+        };
+        // to do => callTimes + 1
+        self.updateService(&service, &inner);
+        Some(service)
     }
 
     pub fn updateServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
-        self.select.updateServices(services);
+        self.services = services;
     }
 
     pub fn getServices(&self) -> HashMap<String, structs::service::CServiceInfo> {
         let mut services = HashMap::new();
-        for item in self.select.getServices() {
+        for item in &self.services {
             services.insert(item.serviceId.to_string(), item.clone());
         }
         services
@@ -36,7 +49,7 @@ impl CService {
 
     pub fn syncData(&mut self, dbServices: &mut Vec<structs::service::CServiceInfo>) {
         let mut memoryMap = HashMap::new();
-        for item in self.select.getServices() {
+        for item in &self.services {
             memoryMap.insert(item.serviceId.clone(), item.clone());
         }
         // dbData + memoryData
@@ -50,7 +63,7 @@ impl CService {
             item.callTimes += s.callTimes;
         }
         // update memory
-        self.select.updateServices(dbServices.clone());
+        self.updateServices(dbServices.clone());
     }
 
     pub fn getRegCenterType(&self) -> &str {
@@ -59,16 +72,26 @@ impl CService {
 }
 
 impl CService {
-    pub fn new(name: &str, regCenterType: &str, selectType: &str) -> Option<CService> {
-        if selectType == consts::proto::select_type_random {
-            return Some(CService{
-                serviceName: name.to_string(),
-                regCenterType: regCenterType.to_string(),
-                select: Box::new(CRandom::new())
-            });
+    fn updateService(&mut self, service: &structs::proto::CService, inner: &structs::service::CServiceInner) {
+        for item in self.services.iter_mut() {
+            if item.serviceId == service.serviceId {
+                item.copyFromInner(service, inner);
+                break;
+            }
         }
-        None
+    }
+}
+
+impl CService {
+    pub fn new(name: &str, regCenterType: &str) -> Option<CService> {
+        return Some(CService{
+            serviceName: name.to_string(),
+            regCenterType: regCenterType.to_string(),
+            services: Vec::new(),
+            selectManager: CManager::new()
+        });
     }
 }
 
 pub mod random;
+pub mod manager;

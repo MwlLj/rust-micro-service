@@ -57,56 +57,24 @@ impl IRegister for CConsul {
         self.client.agent.services.serviceRegister(service)
     }
 
-    fn updateServices(&self, name: &str, memoryServices: &HashMap<String, structs::service::CServiceInfo>) {
-        match self.client.agent.services.getHealthServiceInfo(name) {
-            Ok(mut ss) => {
-                for service in ss.iter_mut() {
-                    let mut proto: String = String::new();
-                    let mut callTimes: u64 = 0;
-                    let tags = &service.Service.Tags;
-                    if tags.len() >= 2 {
-                        proto = tags[0].clone();
-                        callTimes = match tags[1].parse::<u64>() {
-                            Ok(c) => c,
-                            Err(err) => {
-                                println!("tags second param parse to u64 error, err: {}", err);
-                                0
-                            }
-                        };
-                    } else {
-                        println!("hanle server tags length error, first is proto, second is callTimes");
-                        continue;
-                    }
-                    match memoryServices.get(service.Service.Service.as_str()) {
-                        Some(s) => {
-                            callTimes += s.callTimes;
-                        },
-                        None => {
-                        }
-                    }
-                    // update
-                    service.Service.Tags.clear();
-                    service.Service.Tags.push(proto);
-                    service.Service.Tags.push(callTimes.to_string());
-                    self.client.agent.services.serviceRegister(&self.health2register(service));
-                }
-            },
-            Err(err) => {
-                return;
-            }
-        };
+    fn updateServices(&self, memoryServices: &Vec<structs::service::CServiceInfo>) {
+        for service in memoryServices {
+            self.client.agent.services.serviceRegister(&self.service2register(&service));
+        }
     }
 }
 
 impl CConsul {
-    fn health2register(&self, health: &agent::CHealthServiceInfo) -> agent::CServiceRegister {
-        let service = &health.Service;
+    fn service2register(&self, service: &structs::service::CServiceInfo) -> agent::CServiceRegister {
         let mut register = agent::CServiceRegister::default();
-        register.ID = service.ID.clone();
-        register.Name = service.Service.clone();
-        register.Address = service.Address.clone();
-        register.Port = service.Port;
-        register.Tags = Some(service.Tags.clone());
+        register.ID = service.serviceId.clone();
+        register.Name = service.serviceName.clone();
+        register.Address = service.addr.clone();
+        register.Port = service.port;
+        let mut tags = Vec::new();
+        tags.push(service.proto.clone());
+        tags.push(service.callTimes.to_string());
+        register.Tags = Some(tags);
         register
     }
 }

@@ -23,12 +23,12 @@ impl CBuffer {
                 return None;
             }
         };
-        match serviceItems.get(cond.name) {
+        match serviceItems.get_mut(cond.name) {
             Some(s) => {
                 s.service(cond)
             },
             None => {
-                let mut service = match service::CService::new(cond.name, regCenterType, cond.selectType) {
+                let mut service = match service::CService::new(cond.name, regCenterType) {
                     Some(s) => s,
                     None => {
                         println!("service new error");
@@ -54,16 +54,16 @@ impl CBuffer {
 struct CServiceItem {
     name: String,
     regCenterType: String,
-    services: HashMap<String, structs::service::CServiceInfo>
+    services: Vec<structs::service::CServiceInfo>
 }
 impl CBuffer {
-    fn syncData(&self) {
+    fn syncData(&self, syncIntervalMs: u64) {
         let manager = self.manager.clone();
         let serviceItems = self.serviceItems.clone();
         thread::spawn(move || {
             loop {
                 CBuffer::sync(manager.clone(), serviceItems.clone());
-                thread::sleep(time::Duration::from_secs(10));
+                thread::sleep(time::Duration::from_millis(syncIntervalMs));
             }
         });
     }
@@ -72,21 +72,28 @@ impl CBuffer {
         let mut names = Vec::new();
         {
             // avoid occupy mutex
-            let items = match serviceItems.lock() {
+            let mut serviceItems = match serviceItems.lock() {
                 Ok(items) => items,
                 Err(err) => {
                     println!("lock serviceItemss error, err: {}", err);
                     return;
                 }
             };
-            for (k, v) in items.iter() {
-                // update service memory
-                let item = CServiceItem{
+            for (k, v) in serviceItems.iter_mut() {
+                // get service data from register center and update memory
+                let mut dbServices = match CBuffer::getServicesFromRegisterCenter(manager.clone(), &k, v.getRegCenterType()) {
+                    Some(s) => s,
+                    None => {
+                        continue;
+                    }
+                };
+                // update service object memory
+                v.syncData(&mut dbServices);
+                names.push(CServiceItem{
                     name: k.clone(),
                     regCenterType: v.getRegCenterType().to_string(),
-                    services: v.getServices()
-                };
-                names.push(item);
+                    services: dbServices.clone()
+                });
             }
         }
         for item in names {
@@ -102,17 +109,13 @@ impl CBuffer {
                 return;
             }
         };
-        if item.regCenterType == consts::proto::register_center_type_consul {
-            let consul = match &manager.consul {
-                Some(c) => c,
-                None => {
-                    println!("consul object is not exist");
-                    return;
-                }
-            };
-            consul.updateServices(&item.name, &item.services);
-        } else {
-        }
+        let register = match manager.get(&item.regCenterType) {
+            Some(r) => r,
+            None => {
+                return;
+            }
+        };
+        register.updateServices(&item.services);
     }
 
     fn getServicesFromRegisterCenter(manager: Arc<Mutex<register::manager::CManager>>, name: &str, regCenterType: &str) -> Option<Vec<structs::service::CServiceInfo>> {
@@ -123,27 +126,24 @@ impl CBuffer {
                 return None;
             }
         };
-        if regCenterType == consts::proto::register_center_type_consul {
-            let consul = match &manager.consul {
-                Some(c) => c,
-                None => {
-                    println!("consul object is not exist");
-                    return None;
-                }
-            };
-            consul.getServices(name)
-        } else {
-            None
-        }
+        let register = match manager.get(&regCenterType) {
+            Some(r) => r,
+            None => {
+                return None;
+            }
+        };
+        register.getServices(name)
     }
 }
 
 impl CBuffer {
-    pub fn new(centers: &Vec<structs::config::CRegisterCenter>) -> CBuffer {
-        CBuffer{
+    pub fn new(centers: &Vec<structs::config::CRegisterCenter>, syncIntervalMs: u64) -> CBuffer {
+        let buffer = CBuffer{
             manager: Arc::new(Mutex::new(register::manager::CManager::new(centers))),
             serviceItems: Arc::new(Mutex::new(HashMap::new()))
-        }
+        };
+        buffer.syncData(syncIntervalMs);
+        buffer
     }
 }
 

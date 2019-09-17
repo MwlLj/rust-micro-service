@@ -8,23 +8,20 @@ pub struct CManager {
     pub zookeeper: Option<zookeeper::CZookeeper>
 }
 
-/*
 impl CManager {
-    pub fn get<T>(&self, regCenterType: &str) -> Result<&T, &str>
-        where T: IRegister {
+    pub fn get(&self, regCenterType: &str) -> Option<&impl IRegister> {
         if regCenterType == consts::proto::register_center_type_consul {
             match &self.consul {
-                Some(c) => Ok(c),
+                Some(c) => Some(c),
                 None => {
-                    Err("not found")
+                    return None;
                 }
             }
         } else {
-            Err("not found")
+            None
         }
     }
 }
-*/
 
 impl CManager{
     pub fn new(centers: &Vec<structs::config::CRegisterCenter>) -> CManager {
