@@ -28,17 +28,17 @@ impl CBuffer {
                 s.service(cond)
             },
             None => {
-                let mut service = match service::CService::new(cond.name, cond.regCenterType) {
-                    Some(s) => s,
-                    None => {
-                        println!("service new error");
-                        return None;
-                    }
-                };
                 let services = match CBuffer::getServicesFromRegisterCenter(self.manager.clone(), cond.name, cond.regCenterType) {
                     Some(s) => s,
                     None => {
                         println!("getServicesFomrRegisterCenter error");
+                        return None;
+                    }
+                };
+                let mut service = match service::CService::new(cond.name, cond.regCenterType) {
+                    Some(s) => s,
+                    None => {
+                        println!("service new error");
                         return None;
                     }
                 };

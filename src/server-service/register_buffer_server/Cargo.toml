@@ -20,7 +20,15 @@ version = "0.7"
 
 [dependencies.rust_parse]
 git = "https://github.com/MwlLj/rust_parse"
+version = "0.1.12"
+
+[dependencies.config]
+git = "https://github.com/MwlLj/rust-libs"
 version = "*"
 
 [dependencies.tiny_http]
 version = "*"
+
+[dependencies.uuid]
+version = "*"
+features = ["v4"]

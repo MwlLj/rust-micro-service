@@ -7,7 +7,7 @@ pub struct CCert {
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
-pub struct CHttp {
+pub struct CNet {
     pub proto: String,
     pub ip: Option<String>,
     pub port: u16,
@@ -16,10 +16,10 @@ pub struct CHttp {
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CProtoParam {
-    pub httpListen: Option<CHttp>,
+    pub listen: CNet,
     pub registers: Vec<structs::config::CRegisterCenter>,
     pub syncIntervalMs: u64,
-    pub protoDial: String
+    pub protoDial: Option<String>
 }
 
 #[derive(Serialize, Deserialize)]

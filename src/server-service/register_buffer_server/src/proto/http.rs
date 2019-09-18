@@ -12,6 +12,7 @@ use serde_json;
 
 use std::collections::HashMap;
 use std::fs;
+use std::error::Error;
 
 const heart_url: &str = "/heart";
 const heart_method: &str = "POST";
@@ -24,25 +25,19 @@ const param_body_type_json: &str = "json";
 pub struct CHttp<'a> {
     param: &'a structs::start::CProtoParam,
     buffer: buffer::memory::CBuffer,
-    client: CClient
+    client: Option<CClient>
 }
 
 impl<'a> IProto for CHttp<'a> {
     fn start(&self, service: &structs::service::CServiceRegister, heart: &structs::heart::CHeart) -> Result<(), &str> {
-        let httpListen = match &self.param.httpListen {
-            Some(listen) => listen,
-            None => {
-                println!("httpListen field is None");
-                return Err("httpListen field is None")
-            }
-        };
-        let ip = match &httpListen.ip {
+        let listen = &self.param.listen;
+        let ip = match &listen.ip {
             Some(ip) => &ip,
             None => {
                 "0.0.0.0"
             }
         };
-        let selfIp = match &httpListen.ip {
+        let selfIp = match &listen.ip {
             Some(h) => {
                 h.clone()
             },
@@ -50,42 +45,49 @@ impl<'a> IProto for CHttp<'a> {
                 tools::local_ip::localIp()
             }
         };
-        // register self to guard
-        let mut register = CServiceRegister::default();
-        register.ID = service.serviceId.clone();
-        register.Name = service.serviceName.clone();
-        register.Address = selfIp.clone();
-        register.Port = httpListen.port;
-        register.Tags = Some(vec![httpListen.proto.clone(), "0".to_string()]);
-        let mut check = CCheck::default();
-        check.ID = service.serviceId.clone();
-        let mut addr = tools::addr::net2http(&httpListen.proto, &tools::addr::CNet{
-            host: selfIp,
-            port: httpListen.port,
-            domainName: None
-        });
-        addr.push_str(heart_url);
-        check.HTTP = addr;
-        check.Method = heart_method.to_string();
-        match &heart.intervalMs {
-            Some(tMs) => {
-                let mut t = tMs.to_string();
-                t.push_str("ms");
-                check.Interval = t;
+        match &self.client {
+            Some(client) => {
+                // register self to guard
+                let mut register = CServiceRegister::default();
+                register.ID = service.serviceId.clone();
+                register.Name = service.serviceName.clone();
+                register.Address = selfIp.clone();
+                register.Port = listen.port;
+                register.Tags = Some(vec![listen.proto.clone(), "0".to_string()]);
+                let mut check = CCheck::default();
+                check.ID = service.serviceId.clone();
+                let mut addr = tools::addr::net2http(&listen.proto, &tools::addr::CNet{
+                    host: selfIp,
+                    port: listen.port,
+                    domainName: None
+                });
+                addr.push_str(heart_url);
+                check.HTTP = addr;
+                check.Method = heart_method.to_string();
+                match &heart.intervalMs {
+                    Some(tMs) => {
+                        let mut t = tMs.to_string();
+                        t.push_str("ms");
+                        check.Interval = t;
+                    },
+                    None => {
+                        check.Interval = "3s".to_string()
+                    }
+                };
+                register.Check = Some(check);
+                match client.agent.services.serviceRegister(&register) {
+                    Ok(()) => {},
+                    Err(err) => {
+                        return Err(err);
+                    }
+                }
             },
             None => {
-                check.Interval = "3s".to_string()
-            }
-        };
-        register.Check = Some(check);
-        match self.client.agent.services.serviceRegister(&register) {
-            Ok(()) => {},
-            Err(err) => {
-                return Err(err);
             }
         }
         // start http listen
-        let server = match tiny_http::Server::http(&self.joinAddr(&ip, httpListen.port)) {
+        println!("http listen ...");
+        let server = match tiny_http::Server::http(&self.joinAddr(&ip, listen.port)) {
             Ok(s) => s,
             Err(err) => {
                 println!("tiny_http http listen error, err: {}", err);
@@ -105,31 +107,13 @@ impl<'a> CHttp<'a> {
         if url == heart_url {
             self.handleHeart(request);
         } else if url == consts::proto::get_micro_service_url {
-            let params = match params {
-                Some(p) => p,
-                None => {
-                    println!("params not found name");
-                    self.responseDirect(request, "params not found name field");
-                    return;
-                }
-            };
-            self.handleGetMicroServiceInstance(&params, request);
+            self.handleGetMicroServiceInstance(request);
         }
     }
 
-    fn handleGetMicroServiceInstance(&self, params: &HashMap<String, String>, mut request: Request) {
+    fn handleGetMicroServiceInstance(&self, mut request: Request) {
         let mut response = structs::proto::CGetMicroServiceResponse::default();
         loop {
-            let bodyType = match params.get(param_body_type) {
-                Some(s) => s,
-                None => {
-                    println!("params not found type");
-                    response.result = false;
-                    response.code = consts::proto::code_param_error;
-                    response.message = "params not found type field".to_string();
-                    break;
-                }
-            };
             let mut body = String::new();
             match request.as_reader().read_to_string(&mut body) {
                 Ok(len) => {},
@@ -147,7 +131,7 @@ impl<'a> CHttp<'a> {
                     println!("decode request error, err: {}", err);
                     response.result = false;
                     response.code = consts::proto::code_parse_error;
-                    response.message = "decode request error".to_string();
+                    response.message = format!("decode request error, err: {}", err.description()).to_string();
                     break;
                 }
             };
@@ -202,24 +186,36 @@ impl<'a> CHttp<'a> {
 
 impl<'a> CHttp<'a> {
     pub fn new<'b>(param: &'b structs::start::CProtoParam) -> Option<CHttp<'b>> {
-        let net = match tools::addr::addr2net(&param.protoDial) {
-            Ok(n) => n,
-            Err(err) => {
-                println!("addr2net error, err: {}", err);
-                return None;
-            }
-        };
-        let client = match CClient::http(&net.host, net.port, None) {
-            Some(c) => c,
+        let buffer = buffer::memory::CBuffer::new(&param.registers, param.syncIntervalMs);
+        match &param.protoDial {
+            Some(dial) => {
+                let net = match tools::addr::addr2net(&dial) {
+                    Ok(n) => n,
+                    Err(err) => {
+                        println!("addr2net error, err: {}", err);
+                        return None;
+                    }
+                };
+                let client = match CClient::http(&net.host, net.port, None) {
+                    Some(c) => c,
+                    None => {
+                        println!("new client http error");
+                        return None;
+                    }
+                };
+                Some(CHttp{
+                    param: param,
+                    buffer: buffer,
+                    client: Some(client)
+                })
+            },
             None => {
-                println!("new client http error");
-                return None;
+                Some(CHttp{
+                    param: param,
+                    buffer: buffer,
+                    client: None
+                })
             }
-        };
-        return Some(CHttp{
-            param: param,
-            buffer: buffer::memory::CBuffer::new(&param.registers, param.syncIntervalMs),
-            client: client
-        });
+        }
     }
 }
