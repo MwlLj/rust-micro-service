@@ -7,10 +7,11 @@ use std::sync::{Mutex, Arc};
 use std::collections::HashMap;
 
 pub struct CMinConnect {
+    callTimes: u64
 }
 
 impl ISelect for CMinConnect {
-    fn service(&self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)> {
+    fn service(&mut self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)> {
         // to do => callTimes + 1
         let len = services.len();
         if len == 0 {
@@ -26,6 +27,7 @@ impl ISelect for CMinConnect {
                 return None;
             }
         };
+        self.callTimes += 1;
         Some((structs::proto::CService{
             serviceId: obj.serviceId.clone(),
             serviceName: obj.serviceName.clone(),
@@ -33,7 +35,7 @@ impl ISelect for CMinConnect {
             proto: obj.proto.clone(),
             port: obj.port
         }, structs::service::CServiceInner{
-            callTimes: obj.callTimes + 1
+            callTimes: self.callTimes
         }))
     }
 
@@ -41,13 +43,17 @@ impl ISelect for CMinConnect {
         true
     }
     
-    fn rewrite(&self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
+    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
+        dbService.callTimes += self.callTimes;
+        println!("{:?}", dbService.callTimes);
+        self.callTimes = 0;
     }
 }
 
 impl CMinConnect {
     pub fn new() -> CMinConnect {
         CMinConnect{
+            callTimes: 0
         }
     }
 }

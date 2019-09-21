@@ -6,8 +6,8 @@ use std::sync::{Mutex, Arc};
 use std::collections::HashMap;
 
 pub trait ISelect {
-    fn service(&self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)>;
-    fn rewrite(&self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo);
+    fn service(&mut self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)>;
+    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo);
     fn isUpdateRegCenter(&self) -> bool;
 }
 
@@ -27,6 +27,7 @@ impl CService {
         //         return None;
         //     }
         // };
+        println!("CService::service be called");
         let (service, inner) = match self.selectManager.service(&cond.selectType, &self.services, cond) {
             Some(s) => s,
             None => {
@@ -35,7 +36,7 @@ impl CService {
         };
         self.curRegCenterType = cond.regCenterType.to_string();
         self.curSelectType = cond.selectType.to_string();
-        self.updateService(&service, &inner);
+        // self.updateService(&service, &inner);
         Some(service)
     }
 
@@ -87,8 +88,10 @@ impl CService {
 impl CService {
     fn updateService(&mut self, service: &structs::proto::CService, inner: &structs::service::CServiceInner) {
         for item in self.services.iter_mut() {
+            println!("item.serviceId: {}, service.serviceId: {}, inner.callTimes: {}", &item.serviceId, &service.serviceId, inner.callTimes);
             if item.serviceId == service.serviceId {
                 item.copyFromInner(service, inner);
+                // println!("item.callTimes: {}", item.callTimes);
                 break;
             }
         }

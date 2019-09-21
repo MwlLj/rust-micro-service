@@ -59,7 +59,7 @@ impl IRegister for CConsul {
 
     fn updateServices(&self, memoryServices: &Vec<structs::service::CServiceInfo>) {
         for service in memoryServices {
-            println!("callTimes: {:?}", &service.callTimes);
+            // println!("callTimes: {:?}", &service.callTimes);
             self.client.agent.services.serviceRegister(&self.service2register(&service));
         }
     }

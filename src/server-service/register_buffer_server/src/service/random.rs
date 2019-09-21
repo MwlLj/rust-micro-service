@@ -10,7 +10,7 @@ pub struct CRandom {
 }
 
 impl ISelect for CRandom {
-    fn service(&self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)> {
+    fn service(&mut self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)> {
         let len = services.len();
         if len == 0 {
             println!("services size == 0");
@@ -40,7 +40,7 @@ impl ISelect for CRandom {
         false
     }
 
-    fn rewrite(&self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
+    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
     }
 }
 
