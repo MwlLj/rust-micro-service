@@ -42,7 +42,7 @@ impl CBuffer {
                         return None;
                     }
                 };
-                service.updateServices(services);
+                service.initServices(services);
                 let info = service.service(cond);
                 serviceItems.insert(cond.name.to_string(), service);
                 info

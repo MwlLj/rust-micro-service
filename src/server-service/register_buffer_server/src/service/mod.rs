@@ -47,8 +47,12 @@ impl CService {
         self.selectManager.isUpdateRegCenter(&self.curSelectType)
     }
 
-    pub fn updateServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
-        self.services = services;
+    pub fn initServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
+        for item in services {
+            let mut ss = item.clone();
+            ss.callTimes = 0;
+            self.services.push(ss);
+        }
     }
 
     pub fn clearServices(&mut self) {
@@ -80,7 +84,9 @@ impl CService {
                     }
                 };
                 if !self.selectManager.rewrite(&self.curSelectType, item, s) {
-                    self.services.push(item.clone());
+                    let mut ss = item.clone();
+                    ss.callTimes = 0;
+                    self.services.push(ss);
                     removeIndex.push(index);
                 } else {
                     let mut ss = item.clone();
@@ -97,7 +103,9 @@ impl CService {
             // doesn't need update
             self.services.clear();
             for item in dbServices {
-                self.services.push(item.clone());
+                let mut ss = item.clone();
+                ss.callTimes = 0;
+                self.services.push(ss);
             }
         }
         println!("self.services len: {}", self.services.len());
