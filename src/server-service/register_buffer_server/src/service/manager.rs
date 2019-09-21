@@ -40,23 +40,27 @@ macro_rules! call {
 }
 
 impl CManager {
-    pub fn rewrite(&mut self, selectType: &str, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
+    pub fn rewrite(&mut self, selectType: &str, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool {
         if selectType == consts::proto::select_type_random {
             match &mut self.random {
                 Some(s) => {
-                    s.rewrite(dbService, memoryService);
+                    s.rewrite(dbService, memoryService)
                 },
                 None => {
+                    false
                 }
             }
         } else if selectType == consts::proto::select_type_min_connect {
             match &mut self.minConnect {
                 Some(s) => {
-                    s.rewrite(dbService, memoryService);
+                    s.rewrite(dbService, memoryService)
                 },
                 None => {
+                    false
                 }
             }
+        } else {
+            false
         }
     }
 
@@ -84,7 +88,7 @@ impl CManager {
         }
     }
 
-    pub fn service(&mut self, selectType: &str, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)> {
+    pub fn service(&mut self, selectType: &str, services: &mut Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
         // call!(self, selectType, service, services, cond);
         if selectType == consts::proto::select_type_random {
             match &mut self.random {

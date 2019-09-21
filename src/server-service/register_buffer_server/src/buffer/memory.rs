@@ -62,7 +62,9 @@ impl CBuffer {
         let serviceItems = self.serviceItems.clone();
         thread::spawn(move || {
             loop {
+                println!("sync start");
                 CBuffer::sync(manager.clone(), serviceItems.clone());
+                println!("sync end");
                 thread::sleep(time::Duration::from_millis(syncIntervalMs));
             }
         });

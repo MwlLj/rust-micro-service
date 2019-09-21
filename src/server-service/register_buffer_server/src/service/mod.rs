@@ -6,8 +6,11 @@ use std::sync::{Mutex, Arc};
 use std::collections::HashMap;
 
 pub trait ISelect {
-    fn service(&mut self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)>;
-    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo);
+    fn service(&mut self, services: &mut Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService>;
+    /*
+    ** return: if need change to register center is true, otherwise is false
+    */
+    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool;
     fn isUpdateRegCenter(&self) -> bool;
 }
 
@@ -28,7 +31,7 @@ impl CService {
         //     }
         // };
         println!("CService::service be called");
-        let (service, inner) = match self.selectManager.service(&cond.selectType, &self.services, cond) {
+        let service = match self.selectManager.service(&cond.selectType, &mut self.services, cond) {
             Some(s) => s,
             None => {
                 return None;
@@ -44,12 +47,12 @@ impl CService {
         self.selectManager.isUpdateRegCenter(&self.curSelectType)
     }
 
-    pub fn clearServices(&mut self) {
-        self.services.clear();
-    }
-
     pub fn updateServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
         self.services = services;
+    }
+
+    pub fn clearServices(&mut self) {
+        self.services.clear();
     }
 
     pub fn getServices(&self) -> HashMap<String, structs::service::CServiceInfo> {
@@ -61,23 +64,43 @@ impl CService {
     }
 
     pub fn syncData(&mut self, dbServices: &mut Vec<structs::service::CServiceInfo>) {
-        let mut memoryMap = HashMap::new();
-        for item in &self.services {
-            memoryMap.insert(item.serviceId.clone(), item.clone());
-        }
         if self.selectManager.isUpdateRegCenter(&self.curSelectType) {
-            for item in dbServices.iter_mut() {
-                let s = match memoryMap.get(&item.serviceId) {
+            // need update
+            let mut memoryMap = HashMap::new();
+            for item in &self.services {
+                memoryMap.insert(item.serviceId.clone(), item.clone());
+            }
+            self.services.clear();
+            let mut removeIndex = Vec::new();
+            for (index, item) in dbServices.iter_mut().enumerate() {
+                let s = match memoryMap.get_mut(&item.serviceId) {
                     Some(s) => s,
                     None => {
                         continue;
                     }
                 };
-                self.selectManager.rewrite(&self.curSelectType, item, s);
+                if !self.selectManager.rewrite(&self.curSelectType, item, s) {
+                    self.services.push(item.clone());
+                    removeIndex.push(index);
+                } else {
+                    let mut ss = item.clone();
+                    ss.callTimes = 0;
+                    self.services.push(ss);
+                }
+            }
+            // remove doesn't need update services
+            for index in removeIndex {
+                println!("remove not nedd update, index: {} ...", index);
+                dbServices.remove(index);
+            }
+        } else {
+            // doesn't need update
+            self.services.clear();
+            for item in dbServices {
+                self.services.push(item.clone());
             }
         }
-        // update memory
-        self.updateServices(dbServices.clone());
+        println!("self.services len: {}", self.services.len());
     }
 
     pub fn getRegCenterType(&self) -> &str {
@@ -102,8 +125,8 @@ impl CService {
     pub fn new(name: &str) -> Option<CService> {
         return Some(CService{
             serviceName: name.to_string(),
-            curRegCenterType: String::new(),
-            curSelectType: String::new(),
+            curRegCenterType: consts::proto::register_center_type_consul.to_string(),
+            curSelectType: consts::proto::select_type_random.to_string(),
             services: Vec::new(),
             selectManager: CManager::new()
         });

@@ -7,12 +7,10 @@ use std::sync::{Mutex, Arc};
 use std::collections::HashMap;
 
 pub struct CMinConnect {
-    callTimes: u64
 }
 
 impl ISelect for CMinConnect {
-    fn service(&mut self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)> {
-        // to do => callTimes + 1
+    fn service(&mut self, services: &mut Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
         let len = services.len();
         if len == 0 {
             println!("services size == 0");
@@ -20,40 +18,41 @@ impl ISelect for CMinConnect {
         }
         let mut rng = rand::thread_rng();
         let n: usize = rng.gen_range(0, len);
-        let obj = match services.get(n) {
+        let obj = match services.get_mut(n) {
             Some(o) => o,
             None => {
                 println!("not found from services");
                 return None;
             }
         };
-        self.callTimes += 1;
-        Some((structs::proto::CService{
+        // callTimes + 1 for be select service from memory
+        obj.callTimes += 1;
+        Some(structs::proto::CService{
             serviceId: obj.serviceId.clone(),
             serviceName: obj.serviceName.clone(),
             addr: obj.addr.clone(),
             proto: obj.proto.clone(),
             port: obj.port
-        }, structs::service::CServiceInner{
-            callTimes: self.callTimes
-        }))
+        })
     }
 
     fn isUpdateRegCenter(&self) -> bool {
         true
     }
     
-    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
-        dbService.callTimes += self.callTimes;
+    fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool {
+        if memoryService.callTimes == 0 {
+            return false;
+        }
+        dbService.callTimes += memoryService.callTimes;
         println!("{:?}", dbService.callTimes);
-        self.callTimes = 0;
+        true
     }
 }
 
 impl CMinConnect {
     pub fn new() -> CMinConnect {
         CMinConnect{
-            callTimes: 0
         }
     }
 }
