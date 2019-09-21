@@ -7,32 +7,44 @@ use std::collections::HashMap;
 
 pub trait ISelect {
     fn service(&self, services: &Vec<structs::service::CServiceInfo>, cond: &structs::buffer::CServiceQueryCond) -> Option<(structs::proto::CService, structs::service::CServiceInner)>;
+    fn rewrite(&self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo);
+    fn isUpdateRegCenter(&self) -> bool;
 }
 
 pub struct CService {
     serviceName: String,
-    regCenterType: String,
+    curRegCenterType: String,
+    curSelectType: String,
     services: Vec<structs::service::CServiceInfo>,
     selectManager: CManager
 }
 
 impl CService {
     pub fn service(&mut self, cond: &structs::buffer::CServiceQueryCond) -> Option<structs::proto::CService> {
-        let select = match self.selectManager.get(&cond.selectType) {
+        // let select = match self.selectManager.get(&cond.selectType) {
+        //     Some(s) => s,
+        //     None => {
+        //         return None;
+        //     }
+        // };
+        let (service, inner) = match self.selectManager.service(&cond.selectType, &self.services, cond) {
             Some(s) => s,
             None => {
                 return None;
             }
         };
-        let (service, inner) = match select.service(&self.services, cond) {
-            Some(s) => s,
-            None => {
-                return None;
-            }
-        };
-        // to do => callTimes + 1
+        self.curRegCenterType = cond.regCenterType.to_string();
+        self.curSelectType = cond.selectType.to_string();
         self.updateService(&service, &inner);
         Some(service)
+    }
+
+    pub fn isUpdateRegCenter(&self) -> bool {
+        self.selectManager.isUpdateRegCenter(&self.curSelectType)
+    }
+
+    pub fn clearServices(&mut self) {
+        self.services.clear();
     }
 
     pub fn updateServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
@@ -52,22 +64,23 @@ impl CService {
         for item in &self.services {
             memoryMap.insert(item.serviceId.clone(), item.clone());
         }
-        // dbData + memoryData
-        for item in dbServices.iter_mut() {
-            let s = match memoryMap.get(&item.serviceId) {
-                Some(s) => s,
-                None => {
-                    continue;
-                }
-            };
-            item.callTimes += s.callTimes;
+        if self.selectManager.isUpdateRegCenter(&self.curSelectType) {
+            for item in dbServices.iter_mut() {
+                let s = match memoryMap.get(&item.serviceId) {
+                    Some(s) => s,
+                    None => {
+                        continue;
+                    }
+                };
+                self.selectManager.rewrite(&self.curSelectType, item, s);
+            }
         }
         // update memory
         self.updateServices(dbServices.clone());
     }
 
     pub fn getRegCenterType(&self) -> &str {
-        &self.regCenterType
+        &self.curRegCenterType
     }
 }
 
@@ -83,10 +96,11 @@ impl CService {
 }
 
 impl CService {
-    pub fn new(name: &str, regCenterType: &str) -> Option<CService> {
+    pub fn new(name: &str) -> Option<CService> {
         return Some(CService{
             serviceName: name.to_string(),
-            regCenterType: regCenterType.to_string(),
+            curRegCenterType: String::new(),
+            curSelectType: String::new(),
             services: Vec::new(),
             selectManager: CManager::new()
         });
@@ -94,4 +108,5 @@ impl CService {
 }
 
 pub mod random;
+pub mod min_connect;
 pub mod manager;

@@ -35,6 +35,13 @@ impl ISelect for CRandom {
             callTimes: obj.callTimes
         }))
     }
+
+    fn isUpdateRegCenter(&self) -> bool {
+        false
+    }
+
+    fn rewrite(&self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) {
+    }
 }
 
 impl CRandom {

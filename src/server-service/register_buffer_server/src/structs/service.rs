@@ -2,7 +2,7 @@ use crate::structs;
 
 use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CServiceInfo {
     pub serviceId: String,
     pub serviceName: String,
@@ -16,7 +16,7 @@ pub struct CServiceInner {
     pub callTimes: u64
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct CServiceRegister {
     pub serviceId: String,
     pub serviceName: String

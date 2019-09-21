@@ -112,6 +112,7 @@ impl<'a> CHttp<'a> {
     }
 
     fn handleGetMicroServiceInstance(&self, mut request: Request) {
+        // println!("handle start ...");
         let mut response = structs::proto::CGetMicroServiceResponse::default();
         loop {
             let mut body = String::new();
@@ -165,6 +166,7 @@ impl<'a> CHttp<'a> {
             }
         };
         request.respond(Response::from_string(resStr));
+        // println!("handle end ...");
     }
 
     fn handleHeart(&self, request: Request) {

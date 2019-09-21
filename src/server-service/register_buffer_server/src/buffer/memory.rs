@@ -35,7 +35,7 @@ impl CBuffer {
                         return None;
                     }
                 };
-                let mut service = match service::CService::new(cond.name, cond.regCenterType) {
+                let mut service = match service::CService::new(cond.name) {
                     Some(s) => s,
                     None => {
                         println!("service new error");
@@ -80,21 +80,30 @@ impl CBuffer {
                 }
             };
             for (k, v) in serviceItems.iter_mut() {
+                // old data: v.getServices(); new data: dbServices
                 // get service data from register center and update memory
                 let mut dbServices = match CBuffer::getServicesFromRegisterCenter(manager.clone(), &k, v.getRegCenterType()) {
                     Some(s) => s,
                     None => {
+                        v.clearServices();
                         continue;
                     }
                 };
+                // println!("sync, dbServices: {:?}", &dbServices);
                 // update service object memory
                 v.syncData(&mut dbServices);
+                if !v.isUpdateRegCenter() {
+                    continue;
+                }
                 names.push(CServiceItem{
                     name: k.clone(),
                     regCenterType: v.getRegCenterType().to_string(),
                     services: dbServices.clone()
                 });
             }
+        }
+        if names.len() == 0 {
+            return;
         }
         for item in names {
             CBuffer::updateServicesToRegisterCenter(manager.clone(), &item);
