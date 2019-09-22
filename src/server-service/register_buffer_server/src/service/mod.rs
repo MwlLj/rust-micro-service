@@ -30,7 +30,7 @@ impl CService {
         //         return None;
         //     }
         // };
-        println!("CService::service be called");
+        // println!("CService::service be called");
         let service = match self.selectManager.service(&cond.selectType, &mut self.services, cond) {
             Some(s) => s,
             None => {
@@ -39,7 +39,6 @@ impl CService {
         };
         self.curRegCenterType = cond.regCenterType.to_string();
         self.curSelectType = cond.selectType.to_string();
-        // self.updateService(&service, &inner);
         Some(service)
     }
 
@@ -47,10 +46,14 @@ impl CService {
         self.selectManager.isUpdateRegCenter(&self.curSelectType)
     }
 
-    pub fn initServices(&mut self, services: Vec<structs::service::CServiceInfo>) {
+    pub fn initServices(&mut self, services: &Vec<structs::service::CServiceInfo>) {
+        let min = self.minCallTimes(&services);
         for item in services {
             let mut ss = item.clone();
-            ss.callTimes = 0;
+            if ss.callTimes == 0 {
+                ss.callTimes = min;
+            }
+            // ss.callTimes = 0;
             self.services.push(ss);
         }
     }
@@ -73,34 +76,38 @@ impl CService {
     */
     pub fn syncData(&mut self, dbServices: &mut Vec<structs::service::CServiceInfo>) {
         if self.selectManager.isUpdateRegCenter(&self.curSelectType) {
+            println!("mod.rs syncData start, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
             // need update
             let mut memoryMap = HashMap::new();
             for item in &self.services {
                 memoryMap.insert(item.serviceId.clone(), item.clone());
             }
-            self.services.clear();
             let mut removeIds = Vec::new();
             for item in dbServices.iter_mut() {
-                let s = match memoryMap.get_mut(&item.serviceId) {
-                    Some(s) => s,
+                match memoryMap.get_mut(&item.serviceId) {
+                    Some(s) => {
+                        if !self.selectManager.rewrite(&self.curSelectType, item, s) {
+                            removeIds.push(item.serviceId.clone());
+                        }
+                    },
                     None => {
-                        continue;
                     }
                 };
-                if !self.selectManager.rewrite(&self.curSelectType, item, s) {
-                    let mut ss = item.clone();
-                    ss.callTimes = 0;
-                    self.services.push(ss);
-                    removeIds.push(item.serviceId.clone());
-                } else {
-                    let mut ss = item.clone();
-                    ss.callTimes = 0;
-                    self.services.push(ss);
+            }
+            // get min after dbServices's callTimes plus 
+            let min = self.minCallTimes(&dbServices);
+            self.services.clear();
+            for item in dbServices.iter() {
+                let mut ss = item.clone();
+                // ss.callTimes = 0;
+                if ss.callTimes == 0 {
+                    ss.callTimes = min;
                 }
+                self.services.push(ss);
             }
             // remove doesn't need update services
             for id in removeIds {
-                println!("remove not nedd update, id: {} ...", id);
+                // println!("remove not nedd update, id: {} ...", id);
                 match dbServices.iter().position(|x| {
                     if &x.serviceId == &id {
                         true
@@ -115,10 +122,11 @@ impl CService {
                     }
                 }
             }
-            println!("dbServices len: {}", dbServices.len());
+            println!("mod.rs syncData end, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
+            // println!("dbServices len: {}", dbServices.len());
         } else {
             // doesn't need update
-            self.updateServices(dbServices);
+            self.initServices(dbServices);
         }
     }
 
@@ -128,7 +136,36 @@ impl CService {
 }
 
 impl CService {
-    fn updateServices(&mut self, services: &Vec<structs::service::CServiceInfo>) {
+    fn minCallTimes(&self, services: &Vec<structs::service::CServiceInfo>) -> u64 {
+        // get not include 0 vec
+        let mut ss = Vec::new();
+        for item in services.iter() {
+            if item.callTimes == 0 {
+                continue;
+            }
+            ss.push(item);
+        }
+        let len = ss.len();
+        if len == 0 {
+            return 0;
+        }
+        let mut minCallTimesIndex = 0;
+        let mut minCallTimes = match ss.get(minCallTimesIndex) {
+            Some(v) => v.callTimes,
+            None => {
+                return 0;
+            }
+        };
+        for (index, item) in ss.iter().enumerate() {
+            if item.callTimes < minCallTimes {
+                minCallTimes = item.callTimes;
+                minCallTimesIndex = index;
+            }
+        }
+        minCallTimes
+    }
+
+    fn updateServicesWithCheck(&mut self, services: &Vec<structs::service::CServiceInfo>) {
         // iter services
         // check self.services is exists item, if exist -> use exist callTimes, otherwise -> use 0 as callTimes
         let mut tmpMap = HashMap::new();
@@ -148,17 +185,6 @@ impl CService {
             let mut ss = item.clone();
             ss.callTimes = callTimes;
             self.services.push(ss);
-        }
-    }
-
-    fn updateService(&mut self, service: &structs::proto::CService, inner: &structs::service::CServiceInner) {
-        for item in self.services.iter_mut() {
-            println!("item.serviceId: {}, service.serviceId: {}, inner.callTimes: {}", &item.serviceId, &service.serviceId, inner.callTimes);
-            if item.serviceId == service.serviceId {
-                item.copyFromInner(service, inner);
-                // println!("item.callTimes: {}", item.callTimes);
-                break;
-            }
         }
     }
 }
