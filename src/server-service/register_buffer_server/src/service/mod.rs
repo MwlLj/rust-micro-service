@@ -67,6 +67,10 @@ impl CService {
         services
     }
 
+    /*
+    ** update memory services by dbServices
+    ** dbServices: services from register center
+    */
     pub fn syncData(&mut self, dbServices: &mut Vec<structs::service::CServiceInfo>) {
         if self.selectManager.isUpdateRegCenter(&self.curSelectType) {
             // need update
@@ -75,8 +79,8 @@ impl CService {
                 memoryMap.insert(item.serviceId.clone(), item.clone());
             }
             self.services.clear();
-            let mut removeIndex = Vec::new();
-            for (index, item) in dbServices.iter_mut().enumerate() {
+            let mut removeIds = Vec::new();
+            for item in dbServices.iter_mut() {
                 let s = match memoryMap.get_mut(&item.serviceId) {
                     Some(s) => s,
                     None => {
@@ -87,7 +91,7 @@ impl CService {
                     let mut ss = item.clone();
                     ss.callTimes = 0;
                     self.services.push(ss);
-                    removeIndex.push(index);
+                    removeIds.push(item.serviceId.clone());
                 } else {
                     let mut ss = item.clone();
                     ss.callTimes = 0;
@@ -95,20 +99,27 @@ impl CService {
                 }
             }
             // remove doesn't need update services
-            for index in removeIndex {
-                println!("remove not nedd update, index: {} ...", index);
-                dbServices.remove(index);
+            for id in removeIds {
+                println!("remove not nedd update, id: {} ...", id);
+                match dbServices.iter().position(|x| {
+                    if &x.serviceId == &id {
+                        true
+                    } else {
+                        false
+                    }
+                }) {
+                    Some(pos) => {
+                        dbServices.remove(pos);
+                    },
+                    None => {
+                    }
+                }
             }
+            println!("dbServices len: {}", dbServices.len());
         } else {
             // doesn't need update
-            self.services.clear();
-            for item in dbServices {
-                let mut ss = item.clone();
-                ss.callTimes = 0;
-                self.services.push(ss);
-            }
+            self.updateServices(dbServices);
         }
-        println!("self.services len: {}", self.services.len());
     }
 
     pub fn getRegCenterType(&self) -> &str {
@@ -117,6 +128,29 @@ impl CService {
 }
 
 impl CService {
+    fn updateServices(&mut self, services: &Vec<structs::service::CServiceInfo>) {
+        // iter services
+        // check self.services is exists item, if exist -> use exist callTimes, otherwise -> use 0 as callTimes
+        let mut tmpMap = HashMap::new();
+        for item in &self.services {
+            tmpMap.insert(item.serviceId.clone(), item.clone());
+        }
+        self.services.clear();
+        for item in services {
+            let callTimes = match tmpMap.get(&item.serviceId) {
+                Some(s) => {
+                    s.callTimes
+                },
+                None => {
+                    0
+                }
+            };
+            let mut ss = item.clone();
+            ss.callTimes = callTimes;
+            self.services.push(ss);
+        }
+    }
+
     fn updateService(&mut self, service: &structs::proto::CService, inner: &structs::service::CServiceInner) {
         for item in self.services.iter_mut() {
             println!("item.serviceId: {}, service.serviceId: {}, inner.callTimes: {}", &item.serviceId, &service.serviceId, inner.callTimes);
