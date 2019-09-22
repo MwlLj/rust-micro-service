@@ -188,7 +188,9 @@ impl<'a> CHttp<'a> {
 
 impl<'a> CHttp<'a> {
     pub fn new<'b>(param: &'b structs::start::CProtoParam) -> Option<CHttp<'b>> {
-        let buffer = buffer::memory::CBuffer::new(&param.registers, param.syncIntervalMs);
+        let buffer = buffer::memory::CBuffer::new(&param.registers, param.syncIntervalMs, buffer::memory::CExtra{
+            isNeedSyncToRegCenter: false
+        });
         match &param.protoDial {
             Some(dial) => {
                 let net = match tools::addr::addr2net(&dial) {

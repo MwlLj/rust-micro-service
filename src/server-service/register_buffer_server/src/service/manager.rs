@@ -40,6 +40,27 @@ macro_rules! call {
 }
 
 impl CManager {
+    pub fn updateMemory(&self, selectType: &str, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
+        if selectType == consts::proto::select_type_random {
+            match &self.random {
+                Some(s) => {
+                    s.updateMemory(dbServices, memoryServices);
+                },
+                None => {
+                }
+            }
+        } else if selectType == consts::proto::select_type_min_connect {
+            match &self.minConnect {
+                Some(s) => {
+                    s.updateMemory(dbServices, memoryServices);
+                },
+                None => {
+                }
+            }
+        } else {
+        }
+    }
+
     pub fn rewrite(&mut self, selectType: &str, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool {
         if selectType == consts::proto::select_type_random {
             match &mut self.random {

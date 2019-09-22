@@ -41,6 +41,34 @@ impl ISelect for CRandom {
     fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool {
         false
     }
+
+    fn updateMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
+        /*
+        for item in dbServices {
+            let mut ss = item.clone();
+            // ss.callTimes = 0;
+            memoryServices.push(ss);
+        }
+        */
+        let mut tmpMap = HashMap::new();
+        for item in memoryServices.iter() {
+            tmpMap.insert(item.serviceId.clone(), item.clone());
+        }
+        memoryServices.clear();
+        for item in dbServices {
+            let callTimes = match tmpMap.get(&item.serviceId) {
+                Some(s) => {
+                    s.callTimes
+                },
+                None => {
+                    0
+                }
+            };
+            let mut ss = item.clone();
+            ss.callTimes = callTimes;
+            memoryServices.push(ss);
+        }
+    }
 }
 
 impl CRandom {

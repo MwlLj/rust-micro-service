@@ -9,9 +9,22 @@ use std::sync::{Mutex, Arc};
 use std::thread;
 use std::time;
 
+pub struct CExtra {
+    pub isNeedSyncToRegCenter: bool
+}
+
+impl Default for CExtra {
+    fn default() -> CExtra {
+        CExtra{
+            isNeedSyncToRegCenter: false
+        }
+    }
+}
+
 pub struct CBuffer {
     manager: Arc<Mutex<register::manager::CManager>>,
-    serviceItems: Arc<Mutex<HashMap<String, service::CService>>>
+    serviceItems: Arc<Mutex<HashMap<String, service::CService>>>,
+    extra: Arc<Mutex<CExtra>>
 }
 
 impl CBuffer {
@@ -60,17 +73,26 @@ impl CBuffer {
     fn syncData(&self, syncIntervalMs: u64) {
         let manager = self.manager.clone();
         let serviceItems = self.serviceItems.clone();
+        let mut isNeedSyncToRegCenter = false;
+        {
+            isNeedSyncToRegCenter = match self.extra.lock() {
+                Ok(v) => v.isNeedSyncToRegCenter,
+                Err(_) => {
+                    false
+                }
+            };
+        }
         thread::spawn(move || {
             loop {
                 println!("sync start");
-                CBuffer::sync(manager.clone(), serviceItems.clone());
+                CBuffer::sync(manager.clone(), serviceItems.clone(), isNeedSyncToRegCenter);
                 println!("sync end");
                 thread::sleep(time::Duration::from_millis(syncIntervalMs));
             }
         });
     }
 
-    fn sync(manager: Arc<Mutex<register::manager::CManager>>, serviceItems: Arc<Mutex<HashMap<String, service::CService>>>) {
+    fn sync(manager: Arc<Mutex<register::manager::CManager>>, serviceItems: Arc<Mutex<HashMap<String, service::CService>>>, isNeedSyncToRegCenter: bool) {
         let mut names = Vec::new();
         {
             // avoid occupy mutex
@@ -104,11 +126,13 @@ impl CBuffer {
                 });
             }
         }
-        if names.len() == 0 {
-            return;
-        }
-        for item in names {
-            CBuffer::updateServicesToRegisterCenter(manager.clone(), &item);
+        if isNeedSyncToRegCenter {
+            if names.len() == 0 {
+                return;
+            }
+            for item in names {
+                CBuffer::updateServicesToRegisterCenter(manager.clone(), &item);
+            }
         }
     }
 
@@ -148,10 +172,11 @@ impl CBuffer {
 }
 
 impl CBuffer {
-    pub fn new(centers: &Vec<structs::config::CRegisterCenter>, syncIntervalMs: u64) -> CBuffer {
+    pub fn new(centers: &Vec<structs::config::CRegisterCenter>, syncIntervalMs: u64, extra: CExtra) -> CBuffer {
         let buffer = CBuffer{
             manager: Arc::new(Mutex::new(register::manager::CManager::new(centers))),
-            serviceItems: Arc::new(Mutex::new(HashMap::new()))
+            serviceItems: Arc::new(Mutex::new(HashMap::new())),
+            extra: Arc::new(Mutex::new(extra))
         };
         buffer.syncData(syncIntervalMs);
         buffer

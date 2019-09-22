@@ -12,6 +12,7 @@ pub trait ISelect {
     */
     fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool;
     fn isUpdateRegCenter(&self) -> bool;
+    fn updateMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>);
 }
 
 pub struct CService {
@@ -47,6 +48,8 @@ impl CService {
     }
 
     pub fn initServices(&mut self, services: &Vec<structs::service::CServiceInfo>) {
+        self.selectManager.updateMemory(&self.curSelectType, services, &mut self.services);
+        /*
         let min = self.minCallTimes(&services);
         for item in services {
             let mut ss = item.clone();
@@ -56,6 +59,7 @@ impl CService {
             // ss.callTimes = 0;
             self.services.push(ss);
         }
+        */
     }
 
     pub fn clearServices(&mut self) {
@@ -95,6 +99,8 @@ impl CService {
                 };
             }
             // get min after dbServices's callTimes plus 
+            self.selectManager.updateMemory(&self.curSelectType, dbServices, &mut self.services);
+            /*
             let min = self.minCallTimes(&dbServices);
             self.services.clear();
             for item in dbServices.iter() {
@@ -105,6 +111,7 @@ impl CService {
                 }
                 self.services.push(ss);
             }
+            */
             // remove doesn't need update services
             for id in removeIds {
                 // println!("remove not nedd update, id: {} ...", id);
@@ -136,10 +143,11 @@ impl CService {
 }
 
 impl CService {
-    fn minCallTimes(&self, services: &Vec<structs::service::CServiceInfo>) -> u64 {
+    /*
+    fn minCallTimes(&self, dbServices: &Vec<structs::service::CServiceInfo>) -> u64 {
         // get not include 0 vec
         let mut ss = Vec::new();
-        for item in services.iter() {
+        for item in dbServices.iter() {
             if item.callTimes == 0 {
                 continue;
             }
@@ -147,7 +155,25 @@ impl CService {
         }
         let len = ss.len();
         if len == 0 {
-            return 0;
+            // dbServices all is 0 -> get from memory
+            /*
+            ** The situation that caused this result:
+            ** if doesn't need update to register center
+            */
+            for item in &self.services {
+                if item.callTimes == 0 {
+                    continue;
+                }
+                ss.push(item);
+            }
+            if ss.len() == 0 {
+                /*
+                ** dbServices and memory both 0
+                ** The situation that caused this result:
+                ** vec is empty
+                */
+                return 0;
+            }
         }
         let mut minCallTimesIndex = 0;
         let mut minCallTimes = match ss.get(minCallTimesIndex) {
@@ -164,6 +190,7 @@ impl CService {
         }
         minCallTimes
     }
+    */
 
     fn updateServicesWithCheck(&mut self, services: &Vec<structs::service::CServiceInfo>) {
         // iter services
