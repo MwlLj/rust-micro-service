@@ -37,7 +37,7 @@ impl CBuffer {
                         return None;
                     }
                 };
-                let mut service = match service::CService::new(cond.name) {
+                let mut service = match service::CService::new(cond.name, cond.regCenterType, cond.selectType) {
                     Some(s) => s,
                     None => {
                         println!("service new error");
@@ -64,9 +64,9 @@ impl CBuffer {
         let serviceItems = self.serviceItems.clone();
         thread::spawn(move || {
             loop {
-                println!("sync start");
+                // println!("sync start");
                 CBuffer::sync(manager.clone(), serviceItems.clone());
-                println!("sync end");
+                // println!("sync end");
                 thread::sleep(time::Duration::from_millis(syncIntervalMs));
             }
         });

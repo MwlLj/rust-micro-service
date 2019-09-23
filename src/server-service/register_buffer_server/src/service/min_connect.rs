@@ -62,12 +62,12 @@ impl ISelect for CMinConnect {
         println!("{:?}", dbService.callTimes);
         true
         */
-        println!("mc: {}, dc: {}", memoryService.callTimes, dbService.callTimes);
+        // println!("mc: {}, dc: {}", memoryService.callTimes, dbService.callTimes);
         if memoryService.callTimes <= dbService.callTimes {
             return false;
         }
         dbService.callTimes += (memoryService.callTimes - dbService.callTimes);
-        println!("{:?}", dbService.callTimes);
+        // println!("{:?}", dbService.callTimes);
         true
     }
 
@@ -78,6 +78,7 @@ impl ISelect for CMinConnect {
 
     fn updateMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
         let min = self.minCallTimesByDb(dbServices, memoryServices);
+        // println!("min: {}", min);
         self.redressMemory(min, dbServices, memoryServices);
     }
 }
@@ -93,7 +94,7 @@ impl CMinConnect {
             // ss.callTimes = 0;
             memoryServices.push(ss);
         }
-        println!("{:?}", &memoryServices);
+        // println!("{:?}", &memoryServices);
     }
 
     fn minCallTimesByDb(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &Vec<structs::service::CServiceInfo>) -> u64 {

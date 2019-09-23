@@ -39,7 +39,7 @@ impl CService {
                 return None;
             }
         };
-        println!("get service, {:?}", &self.services);
+        // println!("get service, {:?}", &self.services);
         self.curRegCenterType = cond.regCenterType.to_string();
         self.curSelectType = cond.selectType.to_string();
         Some(service)
@@ -86,7 +86,7 @@ impl CService {
     */
     pub fn syncData(&mut self, dbServices: &mut Vec<structs::service::CServiceInfo>) {
         if self.selectManager.isUpdateRegCenter(&self.curSelectType) {
-            println!("mod.rs syncData start, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
+            // println!("mod.rs syncData start, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
             // need update
             let mut memoryMap = HashMap::new();
             for item in self.services.iter() {
@@ -135,7 +135,7 @@ impl CService {
                     }
                 }
             }
-            println!("mod.rs syncData end, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
+            // println!("mod.rs syncData end, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
             // println!("dbServices len: {}", dbServices.len());
         } else {
             // doesn't need update
@@ -223,11 +223,11 @@ impl CService {
 }
 
 impl CService {
-    pub fn new(name: &str) -> Option<CService> {
+    pub fn new(name: &str, regCenterType: &str, selectType: &str) -> Option<CService> {
         return Some(CService{
             serviceName: name.to_string(),
-            curRegCenterType: consts::proto::register_center_type_consul.to_string(),
-            curSelectType: consts::proto::select_type_random.to_string(),
+            curRegCenterType: regCenterType.to_string(),
+            curSelectType: selectType.to_string(),
             services: Vec::new(),
             selectManager: CManager::new()
         });
