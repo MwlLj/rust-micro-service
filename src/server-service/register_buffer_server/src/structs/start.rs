@@ -1,5 +1,7 @@
 use crate::structs;
 
+use register_center_buffer::structs as reg_structs;
+
 use serde::{Serialize, Deserialize};
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
@@ -17,7 +19,7 @@ pub struct CNet {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CProtoParam {
     pub listen: CNet,
-    pub registers: Vec<structs::config::CRegisterCenter>,
+    pub registers: Vec<reg_structs::config::CRegisterCenter>,
     pub syncIntervalMs: u64,
     pub protoDial: Option<String>
 }

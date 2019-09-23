@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
 
+use register_center_buffer::structs as reg_structs;
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct CRegisterCenter {
     pub dial: String,

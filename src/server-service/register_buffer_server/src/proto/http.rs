@@ -1,7 +1,6 @@
 use crate::consts;
 use crate::structs;
 use crate::tools;
-use crate::buffer;
 use super::IProto;
 
 use tiny_http::{Request, Response};
@@ -9,6 +8,8 @@ use rust_parse::url::undecode;
 use consul_client::structs::agent::{CServiceRegister, CCheck};
 use consul_client::client::client::CClient;
 use serde_json;
+use register_center_buffer::structs as reg_structs;
+use register_center_buffer::buffer as reg_buffer;
 
 use std::collections::HashMap;
 use std::fs;
@@ -24,7 +25,7 @@ const param_body_type_json: &str = "json";
 
 pub struct CHttp<'a> {
     param: &'a structs::start::CProtoParam,
-    buffer: buffer::server::CBuffer,
+    buffer: reg_buffer::server::CBuffer,
     client: Option<CClient>
 }
 
@@ -137,7 +138,7 @@ impl<'a> CHttp<'a> {
                 }
             };
             let remoteAddr = request.remote_addr();
-            let service = match self.buffer.getService(&structs::buffer::CServiceQueryCond{
+            let service = match self.buffer.getService(&reg_structs::buffer::CServiceQueryCond{
                 name: &req.name,
                 regCenterType: &req.regCenterType,
                 selectType: &req.selectType,
@@ -188,7 +189,7 @@ impl<'a> CHttp<'a> {
 
 impl<'a> CHttp<'a> {
     pub fn new<'b>(param: &'b structs::start::CProtoParam) -> Option<CHttp<'b>> {
-        let buffer = buffer::server::CBuffer::new(&param.registers, param.syncIntervalMs, buffer::CExtra{
+        let buffer = reg_buffer::server::CBuffer::new(&param.registers, param.syncIntervalMs, reg_buffer::CExtra{
         });
         match &param.protoDial {
             Some(dial) => {

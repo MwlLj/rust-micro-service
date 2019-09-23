@@ -1,15 +1,8 @@
 use crate::consts;
 
-use serde::{Serialize, Deserialize};
+use register_center_buffer::structs as reg_structs;
 
-#[derive(Serialize, Deserialize, Default, Clone)]
-pub struct CService {
-    pub serviceId: String,
-    pub serviceName: String,
-    pub addr: String,
-    pub proto: String,
-    pub port: u16
-}
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct CGetMicroServiceRequest {
@@ -20,7 +13,7 @@ pub struct CGetMicroServiceRequest {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CGetMicroServiceResponse {
-    pub service: Option<CService>,
+    pub service: Option<reg_structs::proto::CService>,
     pub result: bool,
     pub code: u8,
     pub message: String

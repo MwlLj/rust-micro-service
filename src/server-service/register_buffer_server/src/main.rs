@@ -5,6 +5,7 @@ use register_buffer_server::proto::{self, IProto};
 use serde::{Serialize, Deserialize};
 use rust_parse::cmd::CCmd;
 use config::json::CConfig;
+use register_center_buffer::structs as reg_structs;
 
 fn start() {
     let mut cmdHandler = CCmd::new();
@@ -21,7 +22,7 @@ fn start() {
                 port: 5000,
                 cert: None
             },
-            registers: vec![structs::config::CRegisterCenter{
+            registers: vec![reg_structs::config::CRegisterCenter{
                 dial: "127.0.0.1:8500".to_string(),
                 proto: consts::proto::register_center_type_consul.to_string()
             }],
