@@ -24,7 +24,7 @@ const param_body_type_json: &str = "json";
 
 pub struct CHttp<'a> {
     param: &'a structs::start::CProtoParam,
-    buffer: buffer::memory::CBuffer,
+    buffer: buffer::server::CBuffer,
     client: Option<CClient>
 }
 
@@ -188,8 +188,7 @@ impl<'a> CHttp<'a> {
 
 impl<'a> CHttp<'a> {
     pub fn new<'b>(param: &'b structs::start::CProtoParam) -> Option<CHttp<'b>> {
-        let buffer = buffer::memory::CBuffer::new(&param.registers, param.syncIntervalMs, buffer::memory::CExtra{
-            isNeedSyncToRegCenter: false
+        let buffer = buffer::server::CBuffer::new(&param.registers, param.syncIntervalMs, buffer::CExtra{
         });
         match &param.protoDial {
             Some(dial) => {

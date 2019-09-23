@@ -13,6 +13,7 @@ pub trait ISelect {
     fn rewrite(&mut self, dbService: &mut structs::service::CServiceInfo, memoryService: &structs::service::CServiceInfo) -> bool;
     fn isUpdateRegCenter(&self) -> bool;
     fn updateMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>);
+    fn updateMemoryFromLocal(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>);
 }
 
 pub struct CService {
@@ -38,6 +39,7 @@ impl CService {
                 return None;
             }
         };
+        println!("get service, {:?}", &self.services);
         self.curRegCenterType = cond.regCenterType.to_string();
         self.curSelectType = cond.selectType.to_string();
         Some(service)
@@ -74,6 +76,10 @@ impl CService {
         services
     }
 
+    pub fn syncDataFromLocal(&mut self, dbServices: &Vec<structs::service::CServiceInfo>) {
+        self.selectManager.updateMemoryFromLocal(&self.curSelectType, dbServices, &mut self.services);
+    }
+
     /*
     ** update memory services by dbServices
     ** dbServices: services from register center
@@ -83,8 +89,8 @@ impl CService {
             println!("mod.rs syncData start, dbServices len: {}, self.services len: {}", dbServices.len(), self.services.len());
             // need update
             let mut memoryMap = HashMap::new();
-            for item in &self.services {
-                memoryMap.insert(item.serviceId.clone(), item.clone());
+            for item in self.services.iter() {
+                memoryMap.insert(&item.serviceId, item);
             }
             let mut removeIds = Vec::new();
             for item in dbServices.iter_mut() {

@@ -71,9 +71,19 @@ impl ISelect for CMinConnect {
         true
     }
 
+    fn updateMemoryFromLocal(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
+        let min = self.minCallTimesByMemory(dbServices, memoryServices);
+        self.redressMemory(min, dbServices, memoryServices);
+    }
+
     fn updateMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
-        let min = self.minCallTimes(dbServices, memoryServices);
-        println!("min: {}", min);
+        let min = self.minCallTimesByDb(dbServices, memoryServices);
+        self.redressMemory(min, dbServices, memoryServices);
+    }
+}
+
+impl CMinConnect {
+    fn redressMemory(&self, min: u64, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
         memoryServices.clear();
         for item in dbServices {
             let mut ss = item.clone();
@@ -83,49 +93,63 @@ impl ISelect for CMinConnect {
             // ss.callTimes = 0;
             memoryServices.push(ss);
         }
+        println!("{:?}", &memoryServices);
     }
-}
 
-impl CMinConnect {
-    fn minCallTimes(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &Vec<structs::service::CServiceInfo>) -> u64 {
-        // get not include 0 vec
-        let mut ss = Vec::new();
-        for item in dbServices.iter() {
+    fn minCallTimesByDb(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &Vec<structs::service::CServiceInfo>) -> u64 {
+        let mut services: Vec<&structs::service::CServiceInfo> = Vec::new();
+        for item in dbServices {
             if item.callTimes == 0 {
                 continue;
             }
-            ss.push(item);
+            services.push(item);
         }
-        let len = ss.len();
+        // println!("minCallTimes, services: {:?}", services);
+        self.minCallTimes(&services)
+    }
+
+    fn minCallTimesByMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &Vec<structs::service::CServiceInfo>) -> u64 {
+        // find exist dbServices and memoryServices
+        // get not include 0 vec
+        let mut memoryTmp = HashMap::new();
+        for item in memoryServices.iter() {
+            memoryTmp.insert(&item.serviceId, item);
+        }
+        let mut services: Vec<&structs::service::CServiceInfo> = Vec::new();
+        for item in dbServices {
+            // println!("from memoryMap: {:?} find {}", &memoryTmp, &item.serviceId);
+            match memoryTmp.get(&item.serviceId) {
+                Some(s) => {
+                    if s.callTimes == 0 {
+                        // println!("item.callTimes == 0");
+                        continue;
+                    }
+                    services.push(s);
+                },
+                None => {
+                }
+            }
+        }
+        // println!("minCallTimes, services: {:?}", services);
+        self.minCallTimes(&services)
+    }
+
+    fn minCallTimes(&self, services: &Vec<&structs::service::CServiceInfo>) -> u64 {
+        let len = services.len();
         if len == 0 {
-            // dbServices all is 0 -> get from memory
             /*
             ** The situation that caused this result:
-            ** if doesn't need update to register center
             */
-            for item in memoryServices {
-                if item.callTimes == 0 {
-                    continue;
-                }
-                ss.push(item);
-            }
-            if ss.len() == 0 {
-                /*
-                ** dbServices and memory both 0
-                ** The situation that caused this result:
-                ** vec is empty
-                */
-                return 0;
-            }
+            return 0;
         }
         let mut minCallTimesIndex = 0;
-        let mut minCallTimes = match ss.get(minCallTimesIndex) {
+        let mut minCallTimes = match services.get(minCallTimesIndex) {
             Some(v) => v.callTimes,
             None => {
                 return 0;
             }
         };
-        for (index, item) in ss.iter().enumerate() {
+        for (index, item) in services.iter().enumerate() {
             if item.callTimes < minCallTimes {
                 minCallTimes = item.callTimes;
                 minCallTimesIndex = index;

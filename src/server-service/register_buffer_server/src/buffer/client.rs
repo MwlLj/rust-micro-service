@@ -3,23 +3,12 @@ use crate::register::IRegister;
 use crate::service;
 use crate::consts;
 use crate::structs;
+use super::CExtra;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, Arc};
 use std::thread;
 use std::time;
-
-pub struct CExtra {
-    pub isNeedSyncToRegCenter: bool
-}
-
-impl Default for CExtra {
-    fn default() -> CExtra {
-        CExtra{
-            isNeedSyncToRegCenter: false
-        }
-    }
-}
 
 pub struct CBuffer {
     manager: Arc<Mutex<register::manager::CManager>>,
@@ -73,70 +62,38 @@ impl CBuffer {
     fn syncData(&self, syncIntervalMs: u64) {
         let manager = self.manager.clone();
         let serviceItems = self.serviceItems.clone();
-        let mut isNeedSyncToRegCenter = false;
-        {
-            isNeedSyncToRegCenter = match self.extra.lock() {
-                Ok(v) => v.isNeedSyncToRegCenter,
-                Err(_) => {
-                    false
-                }
-            };
-        }
         thread::spawn(move || {
             loop {
                 println!("sync start");
-                CBuffer::sync(manager.clone(), serviceItems.clone(), isNeedSyncToRegCenter);
+                CBuffer::sync(manager.clone(), serviceItems.clone());
                 println!("sync end");
                 thread::sleep(time::Duration::from_millis(syncIntervalMs));
             }
         });
     }
 
-    fn sync(manager: Arc<Mutex<register::manager::CManager>>, serviceItems: Arc<Mutex<HashMap<String, service::CService>>>, isNeedSyncToRegCenter: bool) {
-        let mut names = Vec::new();
-        {
-            // avoid occupy mutex
-            let mut serviceItems = match serviceItems.lock() {
-                Ok(items) => items,
-                Err(err) => {
-                    println!("lock serviceItemss error, err: {}", err);
-                    return;
-                }
-            };
-            for (k, v) in serviceItems.iter_mut() {
-                // old data: v.getServices(); new data: dbServices
-                // get service data from register center and update memory
-                let mut dbServices = match CBuffer::getServicesFromRegisterCenter(manager.clone(), &k, v.getRegCenterType()) {
-                    Some(s) => s,
-                    None => {
-                        v.clearServices();
-                        continue;
-                    }
-                };
-                // println!("sync, dbServices: {:?}", &dbServices);
-                // update service object memory
-                if isNeedSyncToRegCenter {
-                    v.syncData(&mut dbServices);
-                } else {
-                    v.syncDataFromLocal(&dbServices);
-                }
-                if !v.isUpdateRegCenter() {
-                    continue;
-                }
-                names.push(CServiceItem{
-                    name: k.clone(),
-                    regCenterType: v.getRegCenterType().to_string(),
-                    services: dbServices.clone()
-                });
-            }
-        }
-        if isNeedSyncToRegCenter {
-            if names.len() == 0 {
+    fn sync(manager: Arc<Mutex<register::manager::CManager>>, serviceItems: Arc<Mutex<HashMap<String, service::CService>>>) {
+        // avoid occupy mutex
+        let mut serviceItems = match serviceItems.lock() {
+            Ok(items) => items,
+            Err(err) => {
+                println!("lock serviceItemss error, err: {}", err);
                 return;
             }
-            for item in names {
-                CBuffer::updateServicesToRegisterCenter(manager.clone(), &item);
-            }
+        };
+        for (k, v) in serviceItems.iter_mut() {
+            // old data: v.getServices(); new data: dbServices
+            // get service data from register center and update memory
+            let mut dbServices = match CBuffer::getServicesFromRegisterCenter(manager.clone(), &k, v.getRegCenterType()) {
+                Some(s) => s,
+                None => {
+                    v.clearServices();
+                    continue;
+                }
+            };
+            // println!("sync, dbServices: {:?}", &dbServices);
+            // update service object memory
+            v.syncDataFromLocal(&dbServices);
         }
     }
 

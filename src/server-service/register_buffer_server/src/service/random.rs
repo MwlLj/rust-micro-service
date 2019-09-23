@@ -42,6 +42,10 @@ impl ISelect for CRandom {
         false
     }
 
+    fn updateMemoryFromLocal(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
+        self.updateMemory(dbServices, memoryServices);
+    }
+
     fn updateMemory(&self, dbServices: &Vec<structs::service::CServiceInfo>, memoryServices: &mut Vec<structs::service::CServiceInfo>) {
         /*
         for item in dbServices {
