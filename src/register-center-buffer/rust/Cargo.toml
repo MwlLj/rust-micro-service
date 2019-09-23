@@ -1,0 +1,34 @@
+[package]
+name = "register_center_buffer"
+version = "0.1.0"
+authors = ["MwlLj <731025894@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.consul_client]
+path = "../../consul-client"
+
+[dependencies.serde]
+version = "1.0"
+
+[dependencies.serde_json]
+version = "1.0"
+
+[dependencies.rand]
+version = "0.7"
+
+[dependencies.rust_parse]
+git = "https://github.com/MwlLj/rust_parse"
+version = "0.1.12"
+
+[dependencies.config]
+git = "https://github.com/MwlLj/rust-libs"
+version = "*"
+
+[dependencies.tiny_http]
+version = "*"
+
+[dependencies.uuid]
+version = "*"
+features = ["v4"]
